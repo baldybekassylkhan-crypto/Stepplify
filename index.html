@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stepplify — Публикуй свои исследования</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ============ Scroll progress, sits just above the nav pill ============ -->
+<div class="scroll-progress" aria-hidden="true">
+  <div class="scroll-progress-fill" id="scrollProgressFill"></div>
+</div>
+
+<div class="hero">
+
+  <!-- ============ Background video (looping) ============ -->
+  <video class="scene" autoplay loop muted playsinline preload="auto" aria-hidden="true">
+    <source src="assets/background.mp4" type="video/mp4" />
+  </video>
+  <div class="veil" aria-hidden="true"></div>
+
+  <!-- ============ Top navigation (glass) ============ -->
+  <header class="topbar">
+    <a href="#" class="brand">
+      <span class="logo-mark">
+        <img src="assets/logo-icon.png" alt="" />
+      </span>
+      <span class="brand-name">Stepplify</span>
+    </a>
+
+    <nav class="nav-center">
+      <a href="#">Каталог статей</a>
+      <a href="#">О проекте</a>
+    </nav>
+
+    <div class="nav-right">
+      <a href="#" class="btn-glass-sm" id="signInLink">Войти</a>
+      <div class="lang-toggle">
+        <button type="button" id="langBtn">eng</button>
+        <div class="lang-menu" id="langMenu">
+          <button type="button" data-lang="eng">eng</button>
+          <button type="button" data-lang="kaz">қаз</button>
+          <button type="button" data-lang="rus">рус</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ Hero content ============ -->
+  <main class="hero-main">
+    <div class="hero-content">
+      <h1 class="hero-title">Публикуй свои <span class="accent">исследования</span><br /><span class="rotator" id="rotator">со всего Казахстана</span></h1>
+      <p class="hero-sub">Загружай статьи, получай отклики и находи читателей за минуты.</p>
+
+      <div class="cta-row">
+        <a href="#" class="btn btn-primary">Опубликовать статью <span class="arrow">→</span></a>
+        <a href="#" class="btn btn-secondary">Топ‑10 недели</a>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ============ Recent articles (infinite marquee) ============ -->
+<section class="recent">
+  <h2 class="recent-title">Недавние публикации</h2>
+  <p class="recent-sub">То, что исследователи со всего Казахстана опубликовали на этой неделе</p>
+
+  <div class="marquee">
+    <div class="marquee-track" id="marqueeTrack">
+      <!-- cards rendered twice via JS for a seamless loop -->
+    </div>
+  </div>
+</section>
+
+<!-- ============ Winners (shuffling photo wall + testimonials) ============ -->
+<!-- Panel sits inset from the viewport edges (not edge-to-edge like
+     .recent) so the fixed background video shows through on both
+     sides, mirroring the floating card panel on sat4.me. -->
+<section class="winners">
+  <div class="winners-panel">
+    <div class="winners-text">
+      <span class="winners-eyebrow">Победители конкурса</span>
+      <h2 class="winners-title">Наши авторы уже<br /><em class="winners-highlight">выиграли путёвки</em></h2>
+      <p class="winners-sub">В Stepplify регулярная публикация статей — это не только опыт и отклики, но и реальный шанс выиграть путёвку.</p>
+      <a href="#" class="btn btn-primary">Участвовать и выиграть <span class="arrow">→</span></a>
+
+      <!-- Small auto-scrolling result pill, echoes the "1520 SAT SCORE"
+           strip peeking out at the bottom of the sat4.me panel -->
+      <div class="winners-pill-wrap">
+        <div class="winners-pill-track" id="winnersPillTrack">
+          <!-- pills rendered via JS, doubled for a seamless loop -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Fixed 5-slot arrangement (xs · s · L · s · L) whose photos and
+         destination badges shuffle in place on a timer, instead of a
+         card marquee sliding sideways. The quote box tracks whichever
+         winner currently sits in the big center slot. -->
+    <div class="winners-stage" id="winnersStage" aria-hidden="true">
+      <div class="ws-slot ws-xs-l"><div class="ws-card"><div class="ws-photo"><img alt="" /></div><span class="ws-badge"></span></div></div>
+      <div class="ws-slot ws-s-l"><div class="ws-card"><div class="ws-photo"><img alt="" /></div><span class="ws-badge"></span></div></div>
+      <div class="ws-slot ws-l-c"><div class="ws-card"><div class="ws-photo"><img alt="" /></div><span class="ws-badge"></span></div></div>
+      <div class="ws-slot ws-s-r"><div class="ws-card"><div class="ws-photo"><img alt="" /></div><span class="ws-badge"></span></div></div>
+      <div class="ws-slot ws-l-r"><div class="ws-card"><div class="ws-photo"><img alt="" /></div><span class="ws-badge"></span></div></div>
+
+      <div class="ws-quote" id="winnersQuote">
+        <p class="ws-quote-text"></p>
+        <div class="ws-quote-name"></div>
+        <div class="ws-quote-meta"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="script.js"></script>
+</body>
+</html>

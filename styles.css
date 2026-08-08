@@ -1,0 +1,904 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,700&display=swap');
+
+:root {
+  --maroon: #8a1f2b;
+  --maroon-dark: #6e1621;
+  --accent: #ff4d3d;
+  --accent-dark: #e0392a;
+  --text-light: #f4f8fb;
+  --nav-bg: rgba(255, 255, 255, 0.14);
+  --nav-border: rgba(255, 255, 255, 0.35);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--text-light);
+  overflow-x: hidden;
+}
+
+.hero {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---------- Background scene (looping video) ---------- */
+/* Fixed to the viewport so it stays put as the page scrolls — the
+   .recent section's own opaque background naturally covers it once
+   scrolled into view, since z-index:-1 paints it behind everything
+   in normal flow. Scaled up just enough beyond the viewport that the
+   mouse-parallax translate (see script.js) never reveals an edge. */
+.scene {
+  position: fixed;
+  inset: -1.5%;
+  width: 103%;
+  height: 103%;
+  z-index: -1;
+  object-fit: cover;
+  object-position: center top;
+  will-change: transform;
+}
+
+/* Gentle ambient darkening behind the headline so plain text reads
+   clearly against the busy sky/mountain photo, with no boxed card */
+.veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(65% 65% at 50% 38%, rgba(4, 16, 30, 0.38) 0%, rgba(4, 16, 30, 0) 72%);
+}
+
+/* ---------- Scroll progress bar (thin, sits above the nav pill) ---------- */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  z-index: 200;
+  background: rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+
+.scroll-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-dark));
+  opacity: 0.55;
+}
+
+/* ---------- Top navigation (glass pill) ---------- */
+/* Fixed to the viewport so it stays on screen through the whole page,
+   not just the hero — content below gets matching top padding so
+   nothing loads underneath it (see .hero-main). */
+.topbar {
+  position: fixed;
+  top: 22px;
+  left: 28px;
+  right: 28px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: var(--nav-bg);
+  border: 1px solid var(--nav-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 30px rgba(4, 20, 38, 0.25);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text-light);
+  flex: 0 0 auto;
+}
+
+.brand .logo-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--maroon) 0%, var(--maroon-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+}
+
+.brand .logo-mark img {
+  width: 23px;
+  height: 23px;
+  object-fit: contain;
+  display: block;
+}
+
+.brand-name {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: -0.2px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+}
+
+.nav-center {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.nav-center a {
+  color: var(--text-light);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  position: relative;
+  padding: 4px 2px;
+}
+
+.nav-center a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: -3px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: right 0.2s ease;
+}
+
+.nav-center a:hover::after {
+  right: 0;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 auto;
+}
+
+.btn-glass-sm {
+  color: var(--text-light);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 9px 20px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-glass-sm:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.lang-toggle {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.lang-toggle button#langBtn {
+  color: var(--text-light);
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  padding: 9px 6px;
+}
+
+.lang-menu {
+  position: absolute;
+  top: 120%;
+  right: 0;
+  background: rgba(20, 30, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 6px;
+  display: none;
+  flex-direction: column;
+  min-width: 90px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.lang-menu.open {
+  display: flex;
+}
+
+.lang-menu button {
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  font: inherit;
+}
+
+.lang-menu button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---------- Hero content ---------- */
+.hero-main {
+  position: relative;
+  z-index: 5;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  /* top padding clears the fixed .topbar (~86px tall incl. its own
+     top offset) plus breathing room */
+  padding: 128px 28px 64px;
+}
+
+/* ---------- Hero text (no card — sits directly on the photo) ---------- */
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  color: var(--text-light);
+  text-align: center;
+}
+
+.hero-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: clamp(36px, 5vw, 58px);
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+  margin-bottom: 20px;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+}
+
+.hero-title .accent {
+  color: var(--accent);
+}
+
+/* Rotating second line — cycles through phrases like on grader.cloud */
+.hero-title .rotator {
+  display: inline-block;
+  transition: opacity 0.35s ease, transform 0.35s ease, filter 0.35s ease, font-size 0.35s ease;
+  will-change: opacity, transform;
+}
+
+.hero-title .rotator.is-swapping {
+  opacity: 0;
+  transform: translateY(10px);
+  filter: blur(6px);
+}
+
+.hero-sub {
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: #ffffff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  max-width: 480px;
+  margin-bottom: 32px;
+}
+
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15.5px;
+  font-weight: 600;
+  padding: 15px 28px;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(224, 57, 42, 0.4);
+}
+
+.btn-primary .arrow {
+  transition: transform 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(224, 57, 42, 0.48);
+}
+
+.btn-primary:hover .arrow {
+  transform: translateX(4px);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--text-light);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: translateY(-2px);
+}
+
+/* ---------- Recent articles (infinite marquee) ---------- */
+/* No background of its own — the fixed .scene photo shows straight
+   through, so the mountain backdrop stays the one continuous
+   background for the whole page instead of handing off to a solid
+   panel. */
+.recent {
+  position: relative;
+  padding: 72px 0 84px;
+  overflow: hidden;
+}
+
+.recent-title {
+  text-align: center;
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: clamp(26px, 3.2vw, 36px);
+  letter-spacing: -0.3px;
+  margin-bottom: 10px;
+  padding: 0 20px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+.recent-sub {
+  text-align: center;
+  color: #ffffff;
+  font-size: 15px;
+  margin-bottom: 46px;
+  padding: 0 20px;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+}
+
+.marquee {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  /* Edge fade is done with gradient overlays rather than mask-image:
+     a mask-image on an ancestor silently breaks backdrop-filter on the
+     glass .article-card children in Chromium/Firefox, so masking here
+     would kill the card blur. */
+}
+
+.marquee::before,
+.marquee::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 90px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.marquee::before {
+  left: 0;
+  background: linear-gradient(90deg, rgba(4, 16, 30, 0.55), transparent);
+}
+
+.marquee::after {
+  right: 0;
+  background: linear-gradient(270deg, rgba(4, 16, 30, 0.55), transparent);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  gap: 22px;
+  padding: 10px 0 20px;
+  animation: marquee-scroll 38s linear infinite;
+}
+
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.article-card {
+  flex: 0 0 auto;
+  width: 250px;
+  background: var(--nav-bg);
+  border: 1px solid var(--nav-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 16px 34px rgba(2, 10, 20, 0.35);
+  color: var(--text-light);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.article-card:nth-child(odd) {
+  --tilt: -2.5deg;
+}
+
+.article-card:nth-child(even) {
+  --tilt: 2deg;
+}
+
+.article-card:hover {
+  transform: rotate(0deg) translateY(-6px);
+  box-shadow: 0 20px 40px rgba(2, 10, 20, 0.45);
+}
+
+.article-card .tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+.tag-science { background: #e3f7f2; color: #0f766e; }
+.tag-tech { background: #eef0ff; color: #4338ca; }
+.tag-eco { background: #e9f8ea; color: #15803d; }
+.tag-history { background: #fff4e0; color: #b45309; }
+.tag-psych { background: #fdeef7; color: #a21caf; }
+.tag-essay { background: #eef2ff; color: #3730a3; }
+
+.article-card h3 {
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-bottom: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 42px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+}
+
+.article-card .article-author {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 2px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+}
+
+.article-card .article-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: rgba(244, 248, 251, 0.65);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+/* ---------- Winners (shuffling photo wall + testimonials) ---------- */
+/* Same floating-panel idea as the "Our users got: 1500+ results"
+   block on sat4.me: a rounded card inset from the viewport edges (the
+   fixed background video shows through on both sides, like their
+   illustration peeking around the panel), a big headline with an
+   italic accent line, and a cluster of tilted photo cards. Unlike a
+   marquee, that cluster holds still — only the photos/badges inside
+   each slot shuffle on a timer — so slot geometry lives in its own
+   block below and JS (script.js) only ever swaps img/text content. */
+.winners {
+  position: relative;
+  padding: 64px 5vw 96px;
+}
+
+.winners-panel {
+  position: relative;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  background: linear-gradient(155deg, #ffffff 0%, #f2faf5 55%, #e6f6ec 100%);
+  border-radius: 32px;
+  padding: 64px 56px;
+  box-shadow: 0 30px 70px rgba(4, 20, 38, 0.35);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.winners-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(20, 40, 35, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 40, 35, 0.05) 1px, transparent 1px);
+  background-size: 42px 42px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 60% at 22% 15%, #000 40%, transparent 90%);
+  mask-image: radial-gradient(ellipse 75% 60% at 22% 15%, #000 40%, transparent 90%);
+  z-index: 0;
+}
+
+.winners-text {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  width: 360px;
+}
+
+.winners-eyebrow {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent-dark);
+  margin-bottom: 14px;
+}
+
+.winners-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: clamp(28px, 3.2vw, 40px);
+  line-height: 1.14;
+  letter-spacing: -0.5px;
+  color: #16222e;
+  margin-bottom: 18px;
+}
+
+.winners-highlight {
+  display: block;
+  font-style: italic;
+  color: var(--accent);
+}
+
+.winners-sub {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #4a5764;
+  max-width: 360px;
+  margin-bottom: 28px;
+}
+
+/* Small auto-scrolling result pill, echoes the score strip peeking
+   out at the bottom of the sat4.me panel */
+.winners-pill-wrap {
+  position: relative;
+  width: 290px;
+  overflow: hidden;
+  margin-top: 30px;
+}
+
+.winners-pill-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 36px;
+  background: linear-gradient(270deg, #f2faf5, transparent);
+  pointer-events: none;
+}
+
+.winners-pill-track {
+  display: flex;
+  width: max-content;
+  gap: 12px;
+  animation: marquee-scroll 18s linear infinite;
+}
+
+.winners-pill-wrap:hover .winners-pill-track {
+  animation-play-state: paused;
+}
+
+.winners-pill {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 8px 16px 8px 8px;
+  box-shadow: 0 8px 20px rgba(20, 30, 50, 0.12);
+  white-space: nowrap;
+}
+
+.winners-pill img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.winners-pill-dest {
+  font-weight: 800;
+  font-size: 14.5px;
+  color: #16222e;
+}
+
+.winners-pill-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(22, 34, 46, 0.45);
+  margin-left: 5px;
+}
+
+.winners-pill-name {
+  font-size: 11px;
+  color: rgba(22, 34, 46, 0.55);
+}
+
+/* ---------- Shuffling stage ---------- */
+.winners-stage {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  height: 440px;
+}
+
+.ws-slot {
+  position: absolute;
+  filter: drop-shadow(0 16px 26px rgba(20, 30, 50, 0.22));
+  transition: transform 0.25s ease;
+}
+
+.ws-xs-l { left: 0;    top: 70px; width: 78px;  height: 210px; --rot: -9deg;  z-index: 1; }
+.ws-s-l  { left: 66px; top: 35px; width: 118px; height: 230px; --rot: -6deg;  z-index: 2; }
+.ws-l-c  { left: 190px; top: 0;   width: 250px; height: 330px; --rot: -2deg;  z-index: 4; }
+.ws-s-r  { left: 452px; top: 42px; width: 112px; height: 222px; --rot: 6deg;  z-index: 2; }
+.ws-l-r  { left: 556px; top: 8px;  width: 190px; height: 300px; --rot: 8deg;  z-index: 3; }
+
+.ws-slot { transform: rotate(var(--rot)); }
+
+.ws-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  padding: 8px;
+  transition: opacity 0.26s ease, transform 0.26s ease;
+}
+
+.ws-card.is-swapping {
+  opacity: 0;
+  transform: scale(0.92);
+}
+
+.ws-card.wp-1 { background: linear-gradient(155deg, #ff8fab, #ff4d6d); }
+.ws-card.wp-2 { background: linear-gradient(155deg, #7fe0cb, #22b8a0); }
+.ws-card.wp-3 { background: linear-gradient(155deg, #2b3345, #12161f); }
+
+.ws-photo {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.ws-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ws-badge {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  background: #fff;
+  color: #16222e;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 4px 9px;
+  border-radius: 999px;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.22);
+  white-space: nowrap;
+}
+
+.ws-xs-l .ws-badge {
+  display: none;
+}
+
+.ws-quote {
+  position: absolute;
+  left: 190px;
+  top: 342px;
+  width: 250px;
+  z-index: 5;
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px 14px 11px;
+  box-shadow: 0 10px 24px rgba(20, 30, 50, 0.16);
+  transition: opacity 0.26s ease, transform 0.26s ease;
+}
+
+.ws-quote.is-swapping {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.ws-quote-text {
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.4;
+  color: #3a4655;
+  margin-bottom: 6px;
+}
+
+.ws-quote-name {
+  font-weight: 700;
+  font-size: 12px;
+  color: #16222e;
+}
+
+.ws-quote-meta {
+  font-size: 10.5px;
+  color: rgba(22, 34, 46, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .winners-pill-track {
+    animation: none;
+  }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .nav-center {
+    display: none;
+  }
+
+  .winners-panel {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 48px 28px 40px;
+  }
+
+  .winners-text {
+    width: auto;
+    text-align: center;
+  }
+
+  .winners-sub {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .winners-pill-wrap {
+    margin: 26px auto 0;
+  }
+
+  .winners-text .btn {
+    justify-content: center;
+    width: fit-content;
+    margin: 0 auto;
+  }
+
+  /* The stage keeps its desktop geometry (fixed px slots) and is
+     just scaled as a whole — transform doesn't reflow layout, so a
+     negative bottom margin reclaims the vertical space the scale-down
+     leaves behind. align-self: center (rather than margin: auto,
+     which collapses to 0 once the item is wider than its container)
+     is what keeps the overflow symmetric so .winners-panel's
+     overflow: hidden clips it evenly on both sides.
+     flex: none overrides the desktop "flex: 1" — on this stacked
+     (column) layout that shorthand's flex-basis: 0% would apply to
+     the vertical main axis instead of the horizontal one, collapsing
+     the stage to 0 height since its panel has no fixed height to
+     flex-grow against. */
+  .winners-stage {
+    flex: none;
+    align-self: center;
+    width: 750px;
+    margin: 8px 0 -150px;
+    transform: scale(0.66);
+    transform-origin: top center;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    padding: 10px 16px;
+  }
+
+  .hero-main {
+    padding: 104px 16px 40px;
+  }
+
+  .cta-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn {
+    justify-content: center;
+  }
+
+  .recent {
+    padding: 56px 0 64px;
+  }
+
+  .article-card {
+    width: 210px;
+    padding: 16px;
+  }
+
+  .winners {
+    padding: 40px 4vw 56px;
+  }
+
+  .winners-panel {
+    border-radius: 26px;
+    padding: 36px 20px 32px;
+  }
+
+  .winners-pill-wrap {
+    width: 240px;
+  }
+
+  .winners-stage {
+    transform: scale(0.46);
+    margin: 0 0 -238px;
+  }
+}
