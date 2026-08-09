@@ -18,9 +18,312 @@ document.addEventListener('DOMContentLoaded', () => {
     langMenu.classList.remove('open');
   });
 
-  document.getElementById('signInLink').addEventListener('click', (e) => {
+  const API_URL = 'http://localhost:5000/api';
+
+  // ============ Auth State ============
+  const authOverlay  = document.getElementById('authOverlay');
+  const authClose    = document.getElementById('authClose');
+  const signInLink   = document.getElementById('signInLink');
+  const logoutLink   = document.getElementById('logoutLink');
+  const userNav      = document.getElementById('userNav');
+  const userNavName  = document.getElementById('userNavName');
+  const userNavPoints = document.getElementById('userNavPoints');
+
+  const loginForm    = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+  const tabLogin     = document.getElementById('tabLogin');
+  const tabRegister  = document.getElementById('tabRegister');
+  const loginError   = document.getElementById('loginError');
+  const registerError = document.getElementById('registerError');
+
+  // Check if user is already logged in
+  const updateNavFromStorage = () => {
+    const token = localStorage.getItem('stepplify_token');
+    const user  = JSON.parse(localStorage.getItem('stepplify_user') || 'null');
+    if (token && user) {
+      signInLink.style.display = 'none';
+      userNav.style.display    = 'flex';
+      userNavName.textContent  = user.fullName.split(' ')[0]; // first name only
+      userNavPoints.textContent = `⭐ ${user.points} баллов`;
+    } else {
+      signInLink.style.display = '';
+      userNav.style.display    = 'none';
+    }
+  };
+  updateNavFromStorage();
+
+  // Open modal
+  signInLink.addEventListener('click', (e) => {
     e.preventDefault();
-    alert('Sign in flow goes here.');
+    authOverlay.classList.add('open');
+    authOverlay.setAttribute('aria-hidden', 'false');
+  });
+
+  // Close modal
+  const closeModal = () => {
+    authOverlay.classList.remove('open');
+    authOverlay.setAttribute('aria-hidden', 'true');
+    loginError.textContent = '';
+    registerError.textContent = '';
+  };
+  authClose.addEventListener('click', closeModal);
+  authOverlay.addEventListener('click', (e) => { if (e.target === authOverlay) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+  // Logout
+  logoutLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    localStorage.removeItem('stepplify_token');
+    localStorage.removeItem('stepplify_user');
+    updateNavFromStorage();
+  });
+
+  // Tab switching
+  [tabLogin, tabRegister].forEach(tab => {
+    tab.addEventListener('click', () => {
+      const isLogin = tab.dataset.tab === 'login';
+      tabLogin.classList.toggle('active', isLogin);
+      tabRegister.classList.toggle('active', !isLogin);
+      loginForm.style.display    = isLogin ? '' : 'none';
+      registerForm.style.display = isLogin ? 'none' : '';
+      loginError.textContent = '';
+      registerError.textContent = '';
+    });
+  });
+
+  // Login submit
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('loginBtn');
+    btn.textContent = 'Входим...';
+    btn.disabled = true;
+    loginError.textContent = '';
+    try {
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email:    document.getElementById('loginEmail').value,
+          password: document.getElementById('loginPassword').value,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка входа');
+      localStorage.setItem('stepplify_token', data.token);
+      localStorage.setItem('stepplify_user', JSON.stringify(data.user));
+      updateNavFromStorage();
+      closeModal();
+      loginForm.reset();
+    } catch (err) {
+      loginError.textContent = err.message;
+    } finally {
+      btn.textContent = 'Войти';
+      btn.disabled = false;
+    }
+  });
+
+  // Register submit
+  registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('registerBtn');
+    btn.textContent = 'Регистрируем...';
+    btn.disabled = true;
+    registerError.textContent = '';
+    try {
+      const res = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: document.getElementById('regName').value,
+          email:    document.getElementById('regEmail').value,
+          password: document.getElementById('regPassword').value,
+          region:   document.getElementById('regRegion').value,
+          district: document.getElementById('regDistrict').value,
+          school:   document.getElementById('regSchool').value,
+          grade:    document.getElementById('regGrade').value,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка регистрации');
+      localStorage.setItem('stepplify_token', data.token);
+      localStorage.setItem('stepplify_user', JSON.stringify(data.user));
+      updateNavFromStorage();
+      closeModal();
+      registerForm.reset();
+    } catch (err) {
+      registerError.textContent = err.message;
+    } finally {
+      btn.textContent = 'Зарегистрироваться';
+      btn.disabled = false;
+    }
+  });
+
+  // ============ Publish Article Modal ============
+  const publishOverlay = document.getElementById('publishOverlay');
+  const publishClose   = document.getElementById('publishClose');
+
+  const openPublish = (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('stepplify_token');
+    if (!token) {
+      // Force open auth modal first
+      authOverlay.classList.add('open');
+      authOverlay.setAttribute('aria-hidden', 'false');
+      document.getElementById('publishError') && (document.getElementById('publishError').textContent = '');
+      return;
+    }
+    publishOverlay.classList.add('open');
+    publishOverlay.setAttribute('aria-hidden', 'false');
+  };
+
+  document.getElementById('publishBtn').addEventListener('click', openPublish);
+  // Also wire the "Участвовать и выиграть" button in winners section
+  document.querySelectorAll('.btn-primary').forEach(btn => {
+    if (btn.textContent.includes('Участвовать')) btn.addEventListener('click', openPublish);
+  });
+
+  publishClose.addEventListener('click', () => {
+    publishOverlay.classList.remove('open');
+    publishOverlay.setAttribute('aria-hidden', 'true');
+  });
+  publishOverlay.addEventListener('click', (e) => {
+    if (e.target === publishOverlay) {
+      publishOverlay.classList.remove('open');
+      publishOverlay.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  // AI check button inside publish form
+  document.getElementById('aiCheckBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('aiCheckBtn');
+    const textarea = document.getElementById('artContent');
+    const token = localStorage.getItem('stepplify_token');
+    if (!textarea.value.trim()) {
+      document.getElementById('publishError').textContent = 'Напишите текст статьи перед проверкой ИИ.';
+      return;
+    }
+    btn.textContent = '✨ Проверяем...';
+    btn.disabled = true;
+    document.getElementById('publishError').textContent = '';
+    try {
+      const res = await fetch(`${API_URL}/ai/edit-draft`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ draftText: textarea.value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка ИИ');
+      textarea.value = data.improvedText;
+    } catch (err) {
+      document.getElementById('publishError').textContent = err.message;
+    } finally {
+      btn.textContent = '✨ Проверить ИИ';
+      btn.disabled = false;
+    }
+  });
+
+  // Publish form submit
+  document.getElementById('publishForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('publishSubmitBtn');
+    btn.textContent = 'Публикуем...';
+    btn.disabled = true;
+    document.getElementById('publishError').textContent = '';
+    const token = localStorage.getItem('stepplify_token');
+    try {
+      const fd = new FormData();
+      fd.append('title',    document.getElementById('artTitle').value);
+      fd.append('content',  document.getElementById('artContent').value);
+      fd.append('category', document.getElementById('artCategory').value);
+      fd.append('locationName', document.getElementById('artLocation').value);
+      const files = document.getElementById('artImages').files;
+      for (const f of files) fd.append('images', f);
+
+      const res = await fetch(`${API_URL}/articles`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка публикации');
+      publishOverlay.classList.remove('open');
+      publishOverlay.setAttribute('aria-hidden', 'true');
+      document.getElementById('publishForm').reset();
+      // Reload marquee with fresh articles
+      const freshRes = await fetch(`${API_URL}/articles/recent?limit=8`);
+      if (freshRes.ok) {
+        const freshArticles = await freshRes.json();
+        const track = document.getElementById('marqueeTrack');
+        if (track && freshArticles.length) {
+          const renderCard = (a) => `
+            <article class="article-card">
+              <span class="tag ${a.tagClass}">${a.tag}</span>
+              <h3>${a.title}</h3>
+              <div class="article-author">${a.author}</div>
+              <div class="article-meta">
+                <span>${a.meta}</span>
+                <span>👁 ${a.views}</span>
+              </div>
+            </article>`;
+          track.innerHTML = freshArticles.map(renderCard).join('') + freshArticles.map(renderCard).join('');
+        }
+      }
+      // Update user nav points
+      const updatedUser = JSON.parse(localStorage.getItem('stepplify_user') || '{}');
+      updatedUser.points = (updatedUser.points || 0) + 100;
+      localStorage.setItem('stepplify_user', JSON.stringify(updatedUser));
+      updateNavFromStorage();
+      alert('🎉 Статья опубликована! Вам начислено +100 баллов.');
+    } catch (err) {
+      document.getElementById('publishError').textContent = err.message;
+    } finally {
+      btn.textContent = 'Опубликовать →';
+      btn.disabled = false;
+    }
+  });
+
+  // ============ Top-10 Weekly Modal ============
+  const top10Overlay = document.getElementById('top10Overlay');
+  const top10Close   = document.getElementById('top10Close');
+  const top10List    = document.getElementById('top10List');
+
+  document.getElementById('top10Btn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    top10Overlay.classList.add('open');
+    top10Overlay.setAttribute('aria-hidden', 'false');
+    top10List.innerHTML = '<div class="top10-loading">Загружаем рейтинг...</div>';
+    try {
+      const res = await fetch(`${API_URL}/leaderboard/weekly`);
+      const data = await res.json();
+      if (!res.ok) throw new Error('Ошибка загрузки');
+      const medals = ['🥇', '🥈', '🥉'];
+      top10List.innerHTML = data.map((u, i) => `
+        <div class="top10-row">
+          <span class="top10-rank">${medals[i] || `#${u.rank}`}</span>
+          <div class="top10-info">
+            <div class="top10-name">${u.name}</div>
+            <div class="top10-meta">${u.meta}</div>
+          </div>
+          <div class="top10-pts">
+            <div class="top10-weekly">+${u.weeklyPoints} <span>за неделю</span></div>
+            <div class="top10-total">${u.totalPoints} всего</div>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      top10List.innerHTML = `<div class="auth-error">Не удалось загрузить рейтинг: ${err.message}</div>`;
+    }
+  });
+
+  top10Close.addEventListener('click', () => {
+    top10Overlay.classList.remove('open');
+    top10Overlay.setAttribute('aria-hidden', 'true');
+  });
+  top10Overlay.addEventListener('click', (e) => {
+    if (e.target === top10Overlay) {
+      top10Overlay.classList.remove('open');
+      top10Overlay.setAttribute('aria-hidden', 'true');
+    }
   });
 
   // Rotating headline tail — cycles through phrases with a fade/blur
@@ -87,8 +390,23 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       </article>`;
 
-    // Rendered twice back-to-back so translateX(-50%) loops seamlessly
-    marqueeTrack.innerHTML = articles.map(renderCard).join('') + articles.map(renderCard).join('');
+    const fetchArticles = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/articles/recent?limit=8');
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.length > 0) return data;
+        }
+      } catch (err) {
+        console.warn('Backend server not running, using fallback articles.', err);
+      }
+      return articles; // Fallback
+    };
+
+    fetchArticles().then(data => {
+      // Rendered twice back-to-back so translateX(-50%) loops seamlessly
+      marqueeTrack.innerHTML = data.map(renderCard).join('') + data.map(renderCard).join('');
+    });
   }
 
   // Winners — same underlying data feeds two widgets styled after the
@@ -96,7 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
   //   1) a small pill strip that scrolls continuously (.winners-pill-track)
   //   2) a fixed 5-slot photo cluster (.winners-stage) that holds its
   //      shape and shuffles which winner's photo/badge each slot shows
-  const winners = [
+  let winners = [
     { name: 'Айдана Сапарова', meta: 'НИШ ФМН · 11 класс', dest: 'Бурабай', img: 'https://i.pravatar.cc/300?img=47', quote: 'Не ожидала, что статья про озёра приведёт меня к отдыху на настоящем озере!' },
     { name: 'Нурлан Ахметов', meta: 'КБТУ · 3 курс', dest: 'Түркістан', img: 'https://i.pravatar.cc/300?img=13', quote: 'Опубликовал статью для портфолио — а получил путёвку в Түркістан.' },
     { name: 'Дана Ермекова', meta: 'НИШ ХБН · 10 класс', dest: 'Медеу', img: 'https://i.pravatar.cc/300?img=25', quote: 'Даже не думала, что моё эссе выберут — и вот я еду в горы!' },
@@ -148,33 +466,54 @@ document.addEventListener('DOMContentLoaded', () => {
       quoteMeta.textContent = winner.meta;
     };
 
-    let offset = 0;
-    slots.forEach((slot, i) => paintSlot(slot, winners[i % winners.length], i));
-    paintQuote(winners[Array.from(slots).indexOf(centerSlot) % winners.length]);
+    const initWinnersWidget = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/winners');
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.length > 0) {
+            winners = data.map(w => ({
+              name: w.name,
+              meta: w.meta,
+              dest: w.destination,
+              img: w.img,
+              quote: w.quote
+            }));
+          }
+        }
+      } catch (err) {
+        console.warn('Backend server not running, using fallback winners.', err);
+      }
 
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!prefersReducedMotion) {
-      setInterval(() => {
-        offset++;
-        slots.forEach((slot, i) => {
-          setTimeout(() => {
-            const card = slot.querySelector('.ws-card');
-            const isCenter = slot === centerSlot;
-            card.classList.add('is-swapping');
-            if (isCenter) quoteBox.classList.add('is-swapping');
+      let offset = 0;
+      slots.forEach((slot, i) => paintSlot(slot, winners[i % winners.length], i));
+      paintQuote(winners[Array.from(slots).indexOf(centerSlot) % winners.length]);
+
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!prefersReducedMotion) {
+        setInterval(() => {
+          offset++;
+          slots.forEach((slot, i) => {
             setTimeout(() => {
-              const winner = winners[(i + offset) % winners.length];
-              paintSlot(slot, winner, i + offset);
-              card.classList.remove('is-swapping');
-              if (isCenter) {
-                paintQuote(winner);
-                quoteBox.classList.remove('is-swapping');
-              }
-            }, 260);
-          }, i * 140);
-        });
-      }, 2800);
-    }
+              const card = slot.querySelector('.ws-card');
+              const isCenter = slot === centerSlot;
+              card.classList.add('is-swapping');
+              if (isCenter) quoteBox.classList.add('is-swapping');
+              setTimeout(() => {
+                const winner = winners[(i + offset) % winners.length];
+                paintSlot(slot, winner, i + offset);
+                card.classList.remove('is-swapping');
+                if (isCenter) {
+                  paintQuote(winner);
+                  quoteBox.classList.remove('is-swapping');
+                }
+              }, 260);
+            }, i * 140);
+          });
+        }, 2800);
+      }
+    };
+    initWinnersWidget();
   }
 
   // Mouse parallax on the (fixed, whole-page) background — the photo

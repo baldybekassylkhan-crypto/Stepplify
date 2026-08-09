@@ -37,6 +37,11 @@
 
     <div class="nav-right">
       <a href="#" class="btn-glass-sm" id="signInLink">Войти</a>
+      <div id="userNav" style="display:none" class="user-nav">
+        <span class="user-nav-name" id="userNavName"></span>
+        <span class="user-nav-points" id="userNavPoints"></span>
+        <a href="#" class="btn-glass-sm" id="logoutLink">Выйти</a>
+      </div>
       <div class="lang-toggle">
         <button type="button" id="langBtn">eng</button>
         <div class="lang-menu" id="langMenu">
@@ -55,8 +60,8 @@
       <p class="hero-sub">Загружай статьи, получай отклики и находи читателей за минуты.</p>
 
       <div class="cta-row">
-        <a href="#" class="btn btn-primary">Опубликовать статью <span class="arrow">→</span></a>
-        <a href="#" class="btn btn-secondary">Топ‑10 недели</a>
+        <a href="#" class="btn btn-primary" id="publishBtn">Опубликовать статью <span class="arrow">→</span></a>
+        <a href="#" class="btn btn-secondary" id="top10Btn">Топ‑10 недели</a>
       </div>
     </div>
   </main>
@@ -116,5 +121,126 @@
 </section>
 
 <script src="script.js"></script>
+
+<!-- ============ Auth Modal ============ -->
+<div class="auth-overlay" id="authOverlay" aria-hidden="true">
+  <div class="auth-modal" role="dialog" aria-modal="true" aria-label="Авторизация">
+    <button class="auth-close" id="authClose" aria-label="Закрыть">&times;</button>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" data-tab="login">Войти</button>
+      <button class="auth-tab" id="tabRegister" data-tab="register">Регистрация</button>
+    </div>
+
+    <!-- Login Form -->
+    <form class="auth-form" id="loginForm">
+      <div class="auth-field">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" placeholder="you@nis.kz" required />
+      </div>
+      <div class="auth-field">
+        <label for="loginPassword">Пароль</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" required />
+      </div>
+      <div class="auth-error" id="loginError"></div>
+      <button type="submit" class="auth-submit" id="loginBtn">Войти</button>
+    </form>
+
+    <!-- Register Form -->
+    <form class="auth-form" id="registerForm" style="display:none">
+      <div class="auth-fields-grid">
+        <div class="auth-field">
+          <label for="regName">Имя и фамилия</label>
+          <input type="text" id="regName" placeholder="Айгерим Қайратова" required />
+        </div>
+        <div class="auth-field">
+          <label for="regEmail">Email</label>
+          <input type="email" id="regEmail" placeholder="you@nis.kz" required />
+        </div>
+        <div class="auth-field">
+          <label for="regPassword">Пароль</label>
+          <input type="password" id="regPassword" placeholder="••••••••" required minlength="6" />
+        </div>
+        <div class="auth-field">
+          <label for="regRegion">Область</label>
+          <input type="text" id="regRegion" placeholder="Алматы" required />
+        </div>
+        <div class="auth-field">
+          <label for="regDistrict">Район</label>
+          <input type="text" id="regDistrict" placeholder="Бостандыкский" required />
+        </div>
+        <div class="auth-field">
+          <label for="regSchool">Школа / ВУЗ</label>
+          <input type="text" id="regSchool" placeholder="НИШ ФМН" required />
+        </div>
+        <div class="auth-field">
+          <label for="regGrade">Класс / Курс</label>
+          <input type="text" id="regGrade" placeholder="11 класс" required />
+        </div>
+      </div>
+      <div class="auth-error" id="registerError"></div>
+      <button type="submit" class="auth-submit" id="registerBtn">Зарегистрироваться</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ Publish Article Modal ============ -->
+<div class="auth-overlay" id="publishOverlay" aria-hidden="true">
+  <div class="auth-modal publish-modal" role="dialog" aria-modal="true" aria-label="Опубликовать статью">
+    <button class="auth-close" id="publishClose" aria-label="Закрыть">&times;</button>
+    <h2 class="modal-title">✍️ Опубликовать статью</h2>
+
+    <form class="auth-form" id="publishForm" enctype="multipart/form-data">
+      <div class="auth-field">
+        <label for="artTitle">Заголовок</label>
+        <input type="text" id="artTitle" placeholder="Как тают ледники Тянь-Шаня..." required />
+      </div>
+      <div class="auth-field">
+        <label for="artCategory">Категория</label>
+        <select id="artCategory" required>
+          <option value="">— Выберите категорию —</option>
+          <option value="Наука">🔬 Наука</option>
+          <option value="Технологии">💻 Технологии</option>
+          <option value="Экология">🌿 Экология</option>
+          <option value="История">📜 История</option>
+          <option value="Эссе">✏️ Эссе</option>
+          <option value="Психология">🧠 Психология</option>
+        </select>
+      </div>
+      <div class="auth-field">
+        <label for="artContent">Текст статьи</label>
+        <textarea id="artContent" rows="6" placeholder="Напишите вашу статью здесь..." required></textarea>
+      </div>
+      <div class="auth-fields-grid">
+        <div class="auth-field">
+          <label for="artLocation">Название локации</label>
+          <input type="text" id="artLocation" placeholder="Алматы, горы Алатау" />
+        </div>
+        <div class="auth-field">
+          <label for="artImages">Фотографии</label>
+          <input type="file" id="artImages" accept="image/*" multiple />
+        </div>
+      </div>
+      <div class="auth-error" id="publishError"></div>
+      <div class="publish-ai-row">
+        <button type="button" class="auth-submit ai-btn" id="aiCheckBtn">✨ Проверить ИИ</button>
+        <button type="submit" class="auth-submit" id="publishSubmitBtn">Опубликовать →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ Top-10 Modal ============ -->
+<div class="auth-overlay" id="top10Overlay" aria-hidden="true">
+  <div class="auth-modal" role="dialog" aria-modal="true" aria-label="Топ-10 недели">
+    <button class="auth-close" id="top10Close" aria-label="Закрыть">&times;</button>
+    <h2 class="modal-title">🏆 Топ‑10 недели</h2>
+    <p style="color:rgba(255,255,255,0.5);font-size:.85rem;margin-bottom:1.2rem">Пользователи с наибольшим приростом баллов за 7 дней</p>
+    <div id="top10List" class="top10-list">
+      <div class="top10-loading">Загружаем рейтинг...</div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
