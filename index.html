@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stepplify — Публикуй свои исследования</title>
+<link rel="stylesheet" href="styles.css?v=1786450899" />
+</head>
+<body>
+
+<!-- ============ Scroll progress, sits just above the nav pill ============ -->
+<div class="scroll-progress" aria-hidden="true">
+  <div class="scroll-progress-fill" id="scrollProgressFill"></div>
+</div>
+
+<div class="hero">
+
+  <!-- ============ Background video (looping) ============ -->
+  <video class="scene" autoplay loop muted playsinline preload="auto" aria-hidden="true">
+    <source src="assets/background.mp4" type="video/mp4" />
+  </video>
+  <div class="veil" aria-hidden="true"></div>
+
+  <!-- ============ Top navigation (glass) ============ -->
+  <header class="topbar">
+    <a href="#" class="brand">
+      <span class="logo-mark">
+        <img src="assets/logo-icon.png" alt="" />
+      </span>
+      <span class="brand-name">Stepplify</span>
+    </a>
+
+    <nav class="nav-center">
+      <a href="catalog.html">Каталог статей</a>
+      <a href="#aboutSection" id="aboutLink">О проекте</a>
+    </nav>
+
+    <div class="nav-right">
+      <a href="#" class="btn-glass-sm" id="signInLink">Войти</a>
+      <div id="userNav" style="display:none" class="user-nav">
+        <button type="button" class="user-chip" id="userNavProfileBtn">
+          <span class="user-nav-avatar" id="userNavAvatar"></span>
+          <span class="user-chip-info">
+            <span class="user-nav-name" id="userNavName"></span>
+            <span class="user-nav-points" id="userNavPoints"></span>
+          </span>
+        </button>
+        <a href="#" class="logout-link" id="logoutLink">Выйти</a>
+      </div>
+      <div class="lang-toggle">
+        <button type="button" id="langBtn">eng</button>
+        <div class="lang-menu" id="langMenu">
+          <button type="button" data-lang="eng">eng</button>
+          <button type="button" data-lang="kaz">қаз</button>
+          <button type="button" data-lang="rus">рус</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ Hero content ============ -->
+  <main class="hero-main">
+    <div class="hero-content">
+      <h1 class="hero-title">Публикуй свои <span class="accent">исследования</span><br /><span class="rotator" id="rotator">со всего Казахстана</span></h1>
+      <p class="hero-sub">Загружай статьи, получай отклики и находи читателей за минуты.</p>
+
+      <div class="cta-row">
+        <a href="#" class="btn btn-primary" id="publishBtn">Опубликовать статью <span class="arrow">→</span></a>
+        <a href="#" class="btn btn-secondary" id="top10Btn">Топ‑10 недели</a>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ============ About the project (collapsed by default, expands
+     downward with an animation when "О проекте" is clicked) ============ -->
+<section class="about-section" id="aboutSection" aria-hidden="true">
+  <div class="about-inner">
+    <div class="about-content">
+      <div class="about-header">
+        <div class="about-header-left">
+          <span class="about-eyebrow">О проекте</span>
+          <h2 class="about-title">Платформа для юных исследователей Казахстана</h2>
+        </div>
+        <div class="about-header-right">
+          <p class="about-text">Stepplify — пространство, где ученики публикуют статьи и исследования о туристических природных местах Казахстана — особенно о малоизвестных, незаслуженно обойдённых вниманием уголках страны. Делись открытиями, вдохновляй других и открывай Казахстан заново.</p>
+        </div>
+      </div>
+
+      <!-- "Route" of the journey: a dashed trail down the left edge fills
+           in (like a map route being walked) as the page scrolls, and
+           each stop lights up + its card slides in once the fill reaches
+           it. See #aboutRouteFill handling in script.js. -->
+      <div class="about-route" id="aboutRoute">
+        <div class="about-route-track">
+          <div class="about-route-fill" id="aboutRouteFill"></div>
+        </div>
+
+        <div class="about-route-point">
+          <span class="arp-dot">✍️</span>
+          <div class="arp-card">
+            <span class="arp-label">Шаг 01</span>
+            <h4>Публикуй</h4>
+            <p>Загружай статьи и исследования о природе и туризме своего региона.</p>
+          </div>
+        </div>
+
+        <div class="about-route-point">
+          <span class="arp-dot">🧭</span>
+          <div class="arp-card">
+            <span class="arp-label">Шаг 02</span>
+            <h4>Открывай</h4>
+            <p>Рассказывай о местах, которые редко попадают на карты туристов.</p>
+          </div>
+        </div>
+
+        <div class="about-route-point">
+          <span class="arp-dot">🏆</span>
+          <div class="arp-card">
+            <span class="arp-label">Шаг 03</span>
+            <h4>Выигрывай</h4>
+            <p>Самый активный автор получает путёвку по Казахстану.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Recent articles (infinite marquee) ============ -->
+<section class="recent">
+  <h2 class="recent-title">Недавние публикации</h2>
+  <p class="recent-sub">То, что исследователи со всего Казахстана опубликовали на этой неделе</p>
+
+  <div class="marquee">
+    <div class="marquee-track" id="marqueeTrack">
+      <!-- cards rendered twice via JS for a seamless loop -->
+    </div>
+  </div>
+</section>
+
+<!-- ============ Winners (shuffling photo wall + testimonials) ============ -->
+<!-- Panel sits inset from the viewport edges (not edge-to-edge like
+     .recent) so the fixed background video shows through on both
+     sides, mirroring the floating card panel on sat4.me. -->
+<section class="winners">
+  <div class="winners-panel">
+    <div class="winners-text">
+      <span class="winners-eyebrow">Победители конкурса</span>
+      <h2 class="winners-title">Наши авторы уже<br /><em class="winners-highlight">выиграли путёвки</em></h2>
+      <p class="winners-sub">В Stepplify регулярная публикация статей — это не только опыт и отклики, но и реальный шанс выиграть путёвку.</p>
+      <a href="#" class="btn btn-primary">Участвовать и выиграть <span class="arrow">→</span></a>
+
+      <!-- Small auto-scrolling result pill, echoes the "1520 SAT SCORE"
+           strip peeking out at the bottom of the sat4.me panel -->
+      <div class="winners-pill-wrap">
+        <div class="winners-pill-track" id="winnersPillTrack">
+          <!-- pills rendered via JS, doubled for a seamless loop -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Fixed 5-slot arrangement (xs · s · L · s · L) whose photos and
+         destination badges shuffle in place on a timer, instead of a
+         card marquee sliding sideways. The quote box tracks whichever
+         winner currently sits in the big center slot. -->
+    <div class="winners-stage" id="winnersStage" aria-hidden="true">
+      <div class="ws-slot ws-xs-l"><div class="ws-card"><div class="ws-photo"><img alt="" /></div><span class="ws-badge"></span></div></div>
+      <div class="ws-slot ws-s-l"><div class="ws-card"><div class="ws-photo"><img alt="" /></div><span class="ws-badge"></span></div></div>
+      <div class="ws-slot ws-l-c"><div class="ws-card"><div class="ws-photo"><img alt="" /></div><span class="ws-badge"></span></div></div>
+      <div class="ws-slot ws-s-r"><div class="ws-card"><div class="ws-photo"><img alt="" /></div><span class="ws-badge"></span></div></div>
+      <div class="ws-slot ws-l-r"><div class="ws-card"><div class="ws-photo"><img alt="" /></div><span class="ws-badge"></span></div></div>
+
+      <div class="ws-quote" id="winnersQuote">
+        <p class="ws-quote-text"></p>
+        <div class="ws-quote-name"></div>
+        <div class="ws-quote-meta"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="script.js?v=1786450899"></script>
+
+<!-- ============ Auth Modal ============ -->
+<div class="auth-overlay" id="authOverlay" aria-hidden="true">
+  <div class="auth-modal" role="dialog" aria-modal="true" aria-label="Авторизация">
+    <button class="auth-close" id="authClose" aria-label="Закрыть">&times;</button>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" data-tab="login">Войти</button>
+      <button class="auth-tab" id="tabRegister" data-tab="register">Регистрация</button>
+    </div>
+
+    <!-- Login Form -->
+    <form class="auth-form" id="loginForm">
+      <div class="auth-field">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" placeholder="you@nis.kz" required />
+      </div>
+      <div class="auth-field">
+        <label for="loginPassword">Пароль</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" required />
+      </div>
+      <div class="auth-error" id="loginError"></div>
+      <button type="submit" class="auth-submit" id="loginBtn">Войти</button>
+    </form>
+
+    <!-- Register Form -->
+    <form class="auth-form" id="registerForm" style="display:none">
+      <div class="auth-fields-grid">
+        <div class="auth-field">
+          <label for="regName">Имя и фамилия</label>
+          <input type="text" id="regName" placeholder="Айгерим Қайратова" required />
+        </div>
+        <div class="auth-field">
+          <label for="regEmail">Email</label>
+          <input type="email" id="regEmail" placeholder="you@nis.kz" required />
+        </div>
+        <div class="auth-field">
+          <label for="regPassword">Пароль</label>
+          <input type="password" id="regPassword" placeholder="••••••••" required minlength="6" />
+        </div>
+        <div class="auth-field autocomplete-wrap">
+          <label for="regRegion">Область</label>
+          <input type="text" id="regRegion" placeholder="Начните вводить название..." autocomplete="off" required />
+          <ul class="autocomplete-list" id="regRegionList" role="listbox"></ul>
+        </div>
+        <div class="auth-field autocomplete-wrap">
+          <label for="regSchool">Школа / ВУЗ</label>
+          <input type="text" id="regSchool" placeholder="НИШ, вуз или своя школа..." autocomplete="off" required />
+          <ul class="autocomplete-list" id="regSchoolList" role="listbox"></ul>
+        </div>
+        <div class="auth-field">
+          <label for="regGrade">Класс / Курс</label>
+          <input type="text" id="regGrade" placeholder="11 класс" required />
+        </div>
+      </div>
+      <div class="auth-error" id="registerError"></div>
+      <button type="submit" class="auth-submit" id="registerBtn">Зарегистрироваться</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ Publish Article Modal ============ -->
+<div class="auth-overlay" id="publishOverlay" aria-hidden="true">
+  <div class="auth-modal publish-modal" role="dialog" aria-modal="true" aria-label="Опубликовать статью">
+    <button class="auth-close" id="publishClose" aria-label="Закрыть">&times;</button>
+    <h2 class="modal-title" id="publishModalTitle">✍️ Опубликовать статью</h2>
+
+    <form class="auth-form" id="publishForm" enctype="multipart/form-data">
+      <div class="auth-field">
+        <label for="artTitle">Заголовок</label>
+        <input type="text" id="artTitle" placeholder="Как тают ледники Тянь-Шаня..." required />
+      </div>
+      <div class="auth-field">
+        <label for="artCategory">Категория</label>
+        <select id="artCategory" required>
+          <option value="">— Выберите категорию —</option>
+          <option value="Наука">Наука</option>
+          <option value="Технологии">Технологии</option>
+          <option value="Экология">Экология</option>
+          <option value="История">История</option>
+          <option value="Эссе">Эссе</option>
+          <option value="Психология">Психология</option>
+        </select>
+      </div>
+      <div class="auth-field">
+        <label for="artContent">Текст статьи</label>
+        <textarea id="artContent" rows="6" placeholder="Напишите вашу статью здесь..." required></textarea>
+      </div>
+      <div class="auth-fields-grid">
+        <div class="auth-field">
+          <label for="artLocation">Название локации</label>
+          <input type="text" id="artLocation" placeholder="Алматы, горы Алатау" />
+        </div>
+        <div class="auth-field">
+          <label for="artImages">Фотографии</label>
+          <input type="file" id="artImages" accept="image/*" multiple />
+        </div>
+      </div>
+      <div class="auth-error" id="publishError"></div>
+      <div class="ai-check-result" id="aiCheckResult" hidden></div>
+      <div class="publish-ai-row">
+        <button type="button" class="auth-submit ai-btn" id="aiCheckBtn">Автопроверка</button>
+        <button type="submit" class="auth-submit" id="publishSubmitBtn">Опубликовать →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ Article Reader Modal ============ -->
+<div class="auth-overlay" id="articleOverlay" aria-hidden="true">
+  <div class="auth-modal article-modal" role="dialog" aria-modal="true" aria-label="Статья">
+    <button class="auth-close" id="articleClose" aria-label="Закрыть">&times;</button>
+    <div class="article-reader" id="articleReader"></div>
+  </div>
+</div>
+
+<!-- ============ Top-10 Modal ============ -->
+<div class="auth-overlay" id="top10Overlay" aria-hidden="true">
+  <div class="auth-modal" role="dialog" aria-modal="true" aria-label="Топ-10 недели">
+    <button class="auth-close" id="top10Close" aria-label="Закрыть">&times;</button>
+    <h2 class="modal-title">🏆 Топ‑10 недели</h2>
+    <p style="color:rgba(255,255,255,0.5);font-size:.85rem;margin-bottom:1.2rem">Пользователи с наибольшим приростом баллов за 7 дней</p>
+    <div id="top10List" class="top10-list">
+      <div class="top10-loading">Загружаем рейтинг...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Profile Modal ============ -->
+<div class="auth-overlay" id="profileOverlay" aria-hidden="true">
+  <div class="auth-modal profile-modal" role="dialog" aria-modal="true" aria-label="Мой профиль">
+    <button class="auth-close" id="profileClose" aria-label="Закрыть">&times;</button>
+
+    <div class="profile-tabs">
+      <button type="button" class="profile-tab active" id="profileTabInfo" data-tab="info">Профиль</button>
+      <button type="button" class="profile-tab" id="profileTabFriends" data-tab="friends">
+        Друзья
+        <span class="profile-tab-badge" id="profileFriendsBadge" hidden>0</span>
+      </button>
+    </div>
+
+    <!-- ===== "Профиль" tab: avatar + editable fields + own articles ===== -->
+    <div class="profile-panel" id="profilePanelInfo">
+      <div class="profile-header">
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar" id="profileAvatar"><span id="profileAvatarInitials"></span></div>
+          <button type="button" class="profile-avatar-badge" id="profileAvatarBtn" aria-label="Изменить фото">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </button>
+          <input type="file" id="profileAvatarInput" accept="image/*" hidden />
+        </div>
+        <input type="text" class="profile-name-input" id="profileName" placeholder="Имя и фамилия" aria-label="Имя и фамилия" />
+        <span class="profile-level-badge" id="profileLevelBadge"></span>
+      </div>
+
+      <div class="profile-stats">
+        <div class="profile-stat">
+          <span class="profile-stat-label">Школа / ВУЗ</span>
+          <input type="text" class="profile-stat-input" id="profileSchool" aria-label="Школа / ВУЗ" />
+        </div>
+        <div class="profile-stat">
+          <span class="profile-stat-label">Класс / Курс</span>
+          <input type="text" class="profile-stat-input" id="profileGrade" aria-label="Класс / Курс" />
+        </div>
+        <div class="profile-stat">
+          <span class="profile-stat-label">Баллы</span>
+          <span class="profile-stat-value profile-stat-points" id="profilePoints">—</span>
+        </div>
+      </div>
+
+      <div class="profile-field">
+        <label for="profileRegion">Область</label>
+        <input type="text" id="profileRegion" placeholder="Алматинская область" />
+      </div>
+
+      <div class="profile-save-row">
+        <span class="profile-save-hint" id="profileSaveHint"></span>
+        <button type="button" class="auth-submit profile-save-btn" id="profileSaveBtn" disabled>Сохранить изменения</button>
+      </div>
+
+      <div class="profile-articles">
+        <h3 class="profile-articles-title">Мои статьи <span class="profile-articles-count" id="profileArticlesCount">0</span></h3>
+        <div id="profileArticlesList" class="profile-articles-list">
+          <div class="top10-loading">Загружаем профиль...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== "Друзья" tab: search + incoming requests + friends list ===== -->
+    <div class="profile-panel" id="profilePanelFriends" hidden>
+      <div class="friends-search">
+        <input type="text" id="friendsSearchInput" placeholder="Найти по имени или школе..." aria-label="Найти друзей" />
+      </div>
+      <div id="friendsSearchResults" class="friends-list"></div>
+
+      <div class="friends-section" id="friendsIncomingSection" hidden>
+        <h4 class="friends-section-title">Заявки в друзья <span class="friends-section-count" id="friendsIncomingCount">0</span></h4>
+        <div id="friendsIncomingList" class="friends-list"></div>
+      </div>
+
+      <div class="friends-section" id="friendsOutgoingSection" hidden>
+        <h4 class="friends-section-title">Отправленные заявки <span class="friends-section-count" id="friendsOutgoingCount">0</span></h4>
+        <div id="friendsOutgoingList" class="friends-list"></div>
+      </div>
+
+      <div class="friends-section">
+        <h4 class="friends-section-title">Мои друзья <span class="friends-section-count" id="friendsCount">0</span></h4>
+        <div id="friendsList" class="friends-list">
+          <div class="top10-loading">Загружаем друзей...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

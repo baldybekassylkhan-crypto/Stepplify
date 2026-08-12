@@ -1,0 +1,37 @@
+{
+  "name": "stepplify-backend",
+  "version": "1.0.0",
+  "description": "Backend API service for Stepplify platform",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:seed": "node src/seed.js"
+  },
+  "keywords": [
+    "stepplify",
+    "express",
+    "prisma",
+    "grok-api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "axios": "^1.7.9",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "sharp": "^0.35.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7",
+    "prisma": "^6.19.3"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  // Live Server watches the whole workspace and reloads the page on any
+  // file change. The backend (server/) lives in this same folder and
+  // writes to its SQLite database on nearly every request (e.g. every
+  // article view increments a counter in server/prisma/dev.db) — Live
+  // Server was picking that up as a "file changed" event and force-
+  // reloading the page, which looked exactly like a modal instantly
+  // closing itself. Ignoring the backend/data folders stops that.
+  "liveServer.settings.ignoreFiles": [
+    ".vscode/**",
+    "server/**",
+    "**/node_modules/**",
+    "**/*.db",
+    "**/*.db-journal",
+    "**/*.db-wal",
+    "**/*.db-shm",
+    "uploads/**"
+  ]
+}

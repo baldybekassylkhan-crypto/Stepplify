@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
+  passwordHash String
+  fullName     String
+  avatarUrl    String?
+  region       String
+  district     String
+  school       String
+  grade        String
+  points       Int        @default(0)
+  level        Int        @default(1)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  articles     Article[]
+  pointLogs    PointLog[]
+  ratings      Rating[]
+
+  sentFriendRequests     Friendship[] @relation("FriendRequester")
+  receivedFriendRequests Friendship[] @relation("FriendAddressee")
+}
+
+// One row per requester->addressee pair, not per friendship — a
+// friendship "exists" once status flips to accepted, but the row (and
+// who requested whom) is kept either way so pending requests can be
+// listed on both sides. Declining/cancelling/unfriending just deletes
+// the row rather than leaving a "declined" tombstone, since nothing in
+// the product needs to remember a past decline.
+model Friendship {
+  id          Int      @id @default(autoincrement())
+  requesterId Int
+  requester   User     @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addresseeId Int
+  addressee   User     @relation("FriendAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status      String   @default("pending") // pending | accepted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([requesterId, addresseeId])
+}
+
+model Article {
+  id           Int      @id @default(autoincrement())
+  title        String
+  content      String
+  category     String
+  images       String   @default("[]")
+  geoLat       Float?
+  geoLng       Float?
+  locationName String?
+  viewsCount   Int      @default(0)
+  authorId     Int
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  ratings      Rating[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Rating {
+  id        Int      @id @default(autoincrement())
+  value     Int
+  text      String?
+  articleId Int
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([articleId, userId])
+}
+
+model PointLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points    Int
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model Winner {
+  id          Int      @id @default(autoincrement())
+  name        String
+  meta        String
+  destination String
+  img         String
+  quote       String
+  createdAt   DateTime @default(now())
+}

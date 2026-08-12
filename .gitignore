@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Secrets
+server/.env
+
+# Local SQLite database + WAL files (runtime data, not source)
+server/dev.db
+server/prisma/dev.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# User-uploaded content (runtime data, not source)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Logs
+server/server.log
+npm-debug.log*
+
+# Editor/tooling-local, not part of the app
+.claude/
+
+# Scratch screen recording accidentally saved into the project
+Desktop*.mp4
+
+# One-off dev screenshot scripts + their output (not part of the app)
+shot.js
+shot2.js
+phrase-*.png

@@ -1,0 +1,3086 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,700&display=swap');
+
+:root {
+  --maroon: #8a1f2b;
+  --maroon-dark: #6e1621;
+  --accent: #ff4d3d;
+  --accent-dark: #e0392a;
+  --text-light: #f4f8fb;
+  --nav-bg: rgba(255, 255, 255, 0.14);
+  --nav-border: rgba(255, 255, 255, 0.35);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--text-light);
+  overflow-x: hidden;
+}
+
+.hero {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---------- Background scene (looping video) ---------- */
+/* Fixed to the viewport so it stays put as the page scrolls — the
+   .recent section's own opaque background naturally covers it once
+   scrolled into view, since z-index:-1 paints it behind everything
+   in normal flow. Scaled up just enough beyond the viewport that the
+   mouse-parallax translate (see script.js) never reveals an edge. */
+.scene {
+  position: fixed;
+  inset: -1.5%;
+  width: 103%;
+  height: 103%;
+  z-index: -1;
+  object-fit: cover;
+  object-position: center top;
+  will-change: transform;
+}
+
+/* Gentle ambient darkening behind the headline so plain text reads
+   clearly against the busy sky/mountain photo, with no boxed card */
+.veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(65% 65% at 50% 38%, rgba(4, 16, 30, 0.38) 0%, rgba(4, 16, 30, 0) 72%);
+}
+
+/* ---------- Scroll progress bar (thin, sits above the nav pill) ---------- */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  z-index: 200;
+  background: rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+
+.scroll-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-dark));
+  opacity: 0.55;
+}
+
+/* ---------- Top navigation (glass pill) ---------- */
+/* Fixed to the viewport so it stays on screen through the whole page,
+   not just the hero — content below gets matching top padding so
+   nothing loads underneath it (see .hero-main). */
+.topbar {
+  position: fixed;
+  top: 22px;
+  left: 28px;
+  right: 28px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: var(--nav-bg);
+  border: 1px solid var(--nav-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  /* The outer shadow grounds the pill; the inset highlight is what
+     actually reads as "glass" rather than a flat tinted bar — a thin
+     line of light along the top inner edge, like light catching the
+     rim of curved glass. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 8px 30px rgba(4, 20, 38, 0.25);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text-light);
+  flex: 0 0 auto;
+}
+
+.brand .logo-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--maroon) 0%, var(--maroon-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+}
+
+.brand:hover .logo-mark {
+  transform: scale(1.08) rotate(-4deg);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 0 5px rgba(255, 77, 61, 0.14);
+}
+
+.brand .logo-mark img {
+  width: 23px;
+  height: 23px;
+  object-fit: contain;
+  display: block;
+}
+
+.brand-name {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: -0.2px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+}
+
+.nav-center {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.nav-center a {
+  color: var(--text-light);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  position: relative;
+  padding: 4px 2px;
+}
+
+.nav-center a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: -3px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: right 0.2s ease;
+}
+
+.nav-center a:hover::after {
+  right: 0;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 auto;
+}
+
+.btn-glass-sm {
+  color: var(--text-light);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 9px 20px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-glass-sm:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.lang-toggle {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.lang-toggle button#langBtn {
+  color: var(--text-light);
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  padding: 9px 6px;
+}
+
+.lang-menu {
+  position: absolute;
+  top: 120%;
+  right: 0;
+  background: rgba(20, 30, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 6px;
+  display: none;
+  flex-direction: column;
+  min-width: 90px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.lang-menu.open {
+  display: flex;
+}
+
+.lang-menu button {
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  font: inherit;
+}
+
+.lang-menu button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---------- Hero content ---------- */
+.hero-main {
+  position: relative;
+  z-index: 5;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  /* top padding clears the fixed .topbar (~86px tall incl. its own
+     top offset) plus breathing room */
+  padding: 128px 28px 64px;
+}
+
+/* ---------- Hero text (no card — sits directly on the photo) ---------- */
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  color: var(--text-light);
+  text-align: center;
+}
+
+.hero-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: clamp(36px, 5vw, 58px);
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+  margin-bottom: 20px;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+}
+
+.hero-title .accent {
+  color: var(--accent);
+}
+
+/* Rotating second line — cycles through phrases like on grader.cloud */
+.hero-title .rotator {
+  display: inline-block;
+  transition: opacity 0.35s ease, transform 0.35s ease, filter 0.35s ease, font-size 0.35s ease;
+  will-change: opacity, transform;
+}
+
+.hero-title .rotator.is-swapping {
+  opacity: 0;
+  transform: translateY(10px);
+  filter: blur(6px);
+}
+
+.hero-sub {
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: #ffffff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  max-width: 480px;
+  margin-bottom: 32px;
+}
+
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15.5px;
+  font-weight: 600;
+  padding: 15px 28px;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(224, 57, 42, 0.4);
+}
+
+.btn-primary .arrow {
+  transition: transform 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(224, 57, 42, 0.48);
+}
+
+.btn-primary:hover .arrow {
+  transform: translateX(4px);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--text-light);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: translateY(-2px);
+}
+
+/* ---------- About the project (collapsed → expands downward) ---------- */
+/* grid-template-rows 0fr -> 1fr is the trick that lets a height:auto
+   block animate smoothly (plain height/max-height transitions either
+   jump instantly or need a hardcoded max-height guess). The inner
+   wrapper needs overflow:hidden + min-height:0 so the 0fr row can
+   actually collapse to zero instead of being pushed open by its
+   content's intrinsic height. */
+.about-section {
+  position: relative;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.7s cubic-bezier(0.65, 0, 0.35, 1);
+  scroll-margin-top: 110px;
+}
+
+.about-section.open {
+  grid-template-rows: 1fr;
+}
+
+.about-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.about-content {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 76px 28px 92px;
+  text-align: left;
+  opacity: 0;
+  transform: translateY(-18px);
+  transition: opacity 0.5s ease 0.18s, transform 0.5s ease 0.18s;
+}
+
+.about-section.open .about-content {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Editorial split instead of a stacked, centered "slide title": the
+   eyebrow + heading anchor the left column, the intro paragraph reads
+   as a separate voice in the right column, divided by a thin rule —
+   closer to how a magazine intro reads than a hero caption. */
+.about-header {
+  display: flex;
+  align-items: flex-end;
+  gap: 56px;
+  flex-wrap: wrap;
+}
+
+.about-header-left {
+  flex: 1 1 320px;
+  min-width: 260px;
+}
+
+.about-header-right {
+  flex: 1 1 360px;
+  min-width: 260px;
+  padding-left: 36px;
+  padding-bottom: 3px;
+  border-left: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.about-eyebrow {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 14px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.about-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: clamp(28px, 3.4vw, 42px);
+  line-height: 1.18;
+  letter-spacing: -0.5px;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  /* Breaks lines at more even lengths instead of stranding a single
+     word (or half a word's width) alone on its own line. */
+  text-wrap: balance;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+
+.about-text {
+  font-size: 16px;
+  line-height: 1.7;
+  color: #ffffff;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 720px) {
+  .about-header {
+    display: block;
+  }
+
+  .about-header-right {
+    border-left: none;
+    padding-left: 0;
+    padding-top: 20px;
+    margin-top: 20px;
+    border-top: 2px solid rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* ---------- "Route" (map-trail) reveal ---------- */
+/* A dashed vertical trail runs down the left edge; a solid glowing
+   fill grows inside it as the reader scrolls (driven by script.js,
+   which measures each stop's position against a trigger line and
+   sets #aboutRouteFill's height). Each stop's dot lights up and its
+   card slides in the moment the fill reaches it, so the three steps
+   reveal one at a time like waypoints being reached on a map instead
+   of all animating together. */
+.about-route {
+  position: relative;
+  max-width: 560px;
+  margin: 48px 0 0;
+  padding-left: 64px;
+  text-align: left;
+}
+
+.about-route-track {
+  position: absolute;
+  left: 22px;
+  top: 24px;
+  bottom: 24px;
+  width: 4px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.25) 0px,
+    rgba(255, 255, 255, 0.25) 7px,
+    transparent 7px,
+    transparent 15px
+  );
+}
+
+.about-route-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 0%;
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-dark));
+  box-shadow: 0 0 14px rgba(255, 77, 61, 0.65);
+  transition: height 0.25s linear;
+}
+
+.about-route-point {
+  position: relative;
+  padding: 0 0 58px;
+}
+
+.about-route-point:last-child {
+  padding-bottom: 4px;
+}
+
+/* Hidden (invisible + shrunk) until the route fill reaches this stop —
+   the icon itself now enters with the same reveal as its card, instead
+   of sitting there fully visible as an empty circle from the start. */
+.arp-dot {
+  position: absolute;
+  left: -64px;
+  top: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 2;
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity 0.35s ease, background 0.4s ease, border-color 0.4s ease,
+              transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease;
+}
+
+.about-route-point.active .arp-dot {
+  opacity: 1;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  border-color: transparent;
+  transform: scale(1.14);
+  box-shadow: 0 10px 26px rgba(224, 57, 42, 0.5);
+}
+
+.arp-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 14px 18px 16px;
+  max-width: 420px;
+  opacity: 0;
+  transform: translateX(-22px);
+  transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.about-route-point.active .arp-card {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.arp-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.arp-card h4 {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 6px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+}
+
+.arp-card p {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+@media (max-width: 560px) {
+  .about-content {
+    padding: 56px 20px 64px;
+  }
+
+  /* The 28px floor in the base clamp() is still too wide for narrow
+     phone columns with long Cyrillic words — scale further down here
+     so the heading wraps into 2–3 balanced lines, not one word per
+     line. */
+  .about-title {
+    font-size: clamp(22px, 7.5vw, 30px);
+    line-height: 1.28;
+  }
+
+  .about-route {
+    padding-left: 54px;
+  }
+
+  .arp-dot {
+    left: -54px;
+    width: 40px;
+    height: 40px;
+    font-size: 17px;
+  }
+
+  .about-route-track {
+    left: 18px;
+  }
+}
+
+/* ---------- Recent articles (infinite marquee) ---------- */
+/* No background of its own — the fixed .scene photo shows straight
+   through, so the mountain backdrop stays the one continuous
+   background for the whole page instead of handing off to a solid
+   panel. */
+.recent {
+  position: relative;
+  padding: 72px 0 84px;
+  overflow: hidden;
+}
+
+.recent-title {
+  text-align: center;
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: clamp(26px, 3.2vw, 36px);
+  letter-spacing: -0.3px;
+  margin-bottom: 10px;
+  padding: 0 20px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+.recent-sub {
+  text-align: center;
+  color: #ffffff;
+  font-size: 15px;
+  margin-bottom: 46px;
+  padding: 0 20px;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+}
+
+.marquee {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  /* No edge gradient here — a flat color overlay never blended cleanly
+     with the bright, changing sky video behind it (mask-image would
+     also silently break backdrop-filter on the glass .article-card
+     children in Chromium/Firefox). Instead each card fades its own
+     opacity out as it nears an edge (see the tickFade loop in
+     script.js), so it genuinely dissolves into whatever's behind it
+     rather than being covered by a mismatched tint. */
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  gap: 28px;
+  padding: 10px 0 26px;
+  animation: marquee-scroll 38s linear infinite;
+}
+
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+@keyframes marquee-scroll {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: -50% 0;
+  }
+}
+
+/* Shadow was one big 34px-blur blob at fairly high opacity — on tilted,
+   closely-packed cards over a bright sky those overlapped into a
+   smeared, muddy halo instead of reading as a clean drop shadow.
+   Two tighter layers (a close "contact" shadow + a shorter ambient
+   one), both with a negative spread to keep them hugging the card
+   instead of ballooning outward, plus a cooler navy tint that blends
+   with the sky instead of a near-black that reads as dirt. */
+.article-card {
+  flex: 0 0 auto;
+  width: 250px;
+  background: var(--nav-bg);
+  border: 1px solid var(--nav-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow:
+    0 3px 8px -2px rgba(8, 20, 45, 0.22),
+    0 14px 26px -10px rgba(8, 20, 45, 0.3);
+  color: var(--text-light);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  cursor: pointer;
+}
+
+.article-card:nth-child(odd) {
+  --tilt: -2.5deg;
+}
+
+.article-card:nth-child(even) {
+  --tilt: 2deg;
+}
+
+.article-card:hover {
+  transform: rotate(0deg) translateY(-6px);
+  box-shadow:
+    0 4px 10px -2px rgba(8, 20, 45, 0.26),
+    0 20px 34px -10px rgba(8, 20, 45, 0.38);
+}
+
+/* Base pill shape for every category tag — not scoped to .article-card
+   because the article reader modal renders the same span outside any
+   card, and without this it fell back to a plain unstyled inline span
+   (square corners, no padding/background) instead of a pill. */
+.tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+.tag-science { background: #e3f7f2; color: #0f766e; }
+.tag-tech { background: #eef0ff; color: #4338ca; }
+.tag-eco { background: #e9f8ea; color: #15803d; }
+.tag-history { background: #fff4e0; color: #b45309; }
+.tag-psych { background: #fdeef7; color: #a21caf; }
+.tag-essay { background: #eef2ff; color: #3730a3; }
+
+.article-card h3 {
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-bottom: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 42px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+}
+
+.article-card .article-author {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 2px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+}
+
+.article-card .article-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: rgba(244, 248, 251, 0.65);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+/* ---------- Winners (shuffling photo wall + testimonials) ---------- */
+/* Same floating-panel idea as the "Our users got: 1500+ results"
+   block on sat4.me: a rounded card inset from the viewport edges (the
+   fixed background video shows through on both sides, like their
+   illustration peeking around the panel), a big headline with an
+   italic accent line, and a cluster of tilted photo cards. Unlike a
+   marquee, that cluster holds still — only the photos/badges inside
+   each slot shuffle on a timer — so slot geometry lives in its own
+   block below and JS (script.js) only ever swaps img/text content. */
+.winners {
+  position: relative;
+  padding: 64px 5vw 96px;
+}
+
+.winners-panel {
+  position: relative;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  background: linear-gradient(155deg, #ffffff 0%, #f2faf5 55%, #e6f6ec 100%);
+  border-radius: 32px;
+  padding: 64px 56px;
+  box-shadow: 0 30px 70px rgba(4, 20, 38, 0.35);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.winners-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(20, 40, 35, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 40, 35, 0.05) 1px, transparent 1px);
+  background-size: 42px 42px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 60% at 22% 15%, #000 40%, transparent 90%);
+  mask-image: radial-gradient(ellipse 75% 60% at 22% 15%, #000 40%, transparent 90%);
+  z-index: 0;
+}
+
+.winners-text {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  width: 360px;
+}
+
+.winners-eyebrow {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent-dark);
+  margin-bottom: 14px;
+}
+
+.winners-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: clamp(28px, 3.2vw, 40px);
+  line-height: 1.14;
+  letter-spacing: -0.5px;
+  color: #16222e;
+  margin-bottom: 18px;
+}
+
+.winners-highlight {
+  display: block;
+  font-style: italic;
+  color: var(--accent);
+}
+
+.winners-sub {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #4a5764;
+  max-width: 360px;
+  margin-bottom: 28px;
+}
+
+/* Small auto-scrolling result pill, echoes the score strip peeking
+   out at the bottom of the sat4.me panel */
+.winners-pill-wrap {
+  position: relative;
+  width: 290px;
+  overflow: hidden;
+  margin-top: 30px;
+}
+
+.winners-pill-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 36px;
+  background: linear-gradient(270deg, #f2faf5, transparent);
+  pointer-events: none;
+}
+
+.winners-pill-track {
+  display: flex;
+  width: max-content;
+  gap: 12px;
+  animation: marquee-scroll 18s linear infinite;
+}
+
+.winners-pill-wrap:hover .winners-pill-track {
+  animation-play-state: paused;
+}
+
+.winners-pill {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 8px 16px 8px 8px;
+  box-shadow: 0 8px 20px rgba(20, 30, 50, 0.12);
+  white-space: nowrap;
+}
+
+.winners-pill img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.winners-pill-dest {
+  font-weight: 800;
+  font-size: 14.5px;
+  color: #16222e;
+}
+
+.winners-pill-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(22, 34, 46, 0.45);
+  margin-left: 5px;
+}
+
+.winners-pill-name {
+  font-size: 11px;
+  color: rgba(22, 34, 46, 0.55);
+}
+
+/* ---------- Shuffling stage ---------- */
+.winners-stage {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  height: 440px;
+}
+
+.ws-slot {
+  position: absolute;
+  filter: drop-shadow(0 16px 26px rgba(20, 30, 50, 0.22));
+  transition: transform 0.25s ease;
+}
+
+.ws-xs-l { left: 0;    top: 70px; width: 78px;  height: 210px; --rot: -9deg;  z-index: 1; }
+.ws-s-l  { left: 66px; top: 35px; width: 118px; height: 230px; --rot: -6deg;  z-index: 2; }
+.ws-l-c  { left: 190px; top: 0;   width: 250px; height: 330px; --rot: -2deg;  z-index: 4; }
+.ws-s-r  { left: 452px; top: 42px; width: 112px; height: 222px; --rot: 6deg;  z-index: 2; }
+.ws-l-r  { left: 556px; top: 8px;  width: 190px; height: 300px; --rot: 8deg;  z-index: 3; }
+
+.ws-slot { transform: rotate(var(--rot)); }
+
+.ws-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  padding: 8px;
+  transition: opacity 0.26s ease, transform 0.26s ease;
+}
+
+.ws-card.is-swapping {
+  opacity: 0;
+  transform: scale(0.92);
+}
+
+.ws-card.wp-1 { background: linear-gradient(155deg, #ff8fab, #ff4d6d); }
+.ws-card.wp-2 { background: linear-gradient(155deg, #7fe0cb, #22b8a0); }
+.ws-card.wp-3 { background: linear-gradient(155deg, #2b3345, #12161f); }
+
+.ws-photo {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.ws-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ws-badge {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  background: #fff;
+  color: #16222e;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 4px 9px;
+  border-radius: 999px;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.22);
+  white-space: nowrap;
+}
+
+.ws-xs-l .ws-badge {
+  display: none;
+}
+
+.ws-quote {
+  position: absolute;
+  left: 190px;
+  top: 342px;
+  width: 250px;
+  z-index: 5;
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px 14px 11px;
+  box-shadow: 0 10px 24px rgba(20, 30, 50, 0.16);
+  transition: opacity 0.26s ease, transform 0.26s ease;
+}
+
+.ws-quote.is-swapping {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.ws-quote-text {
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.4;
+  color: #3a4655;
+  margin-bottom: 6px;
+}
+
+.ws-quote-name {
+  font-weight: 700;
+  font-size: 12px;
+  color: #16222e;
+}
+
+.ws-quote-meta {
+  font-size: 10.5px;
+  color: rgba(22, 34, 46, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .winners-pill-track {
+    animation: none;
+  }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .nav-center {
+    display: none;
+  }
+
+  .winners-panel {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 48px 28px 40px;
+  }
+
+  .winners-text {
+    width: auto;
+    text-align: center;
+  }
+
+  .winners-sub {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .winners-pill-wrap {
+    margin: 26px auto 0;
+  }
+
+  .winners-text .btn {
+    justify-content: center;
+    width: fit-content;
+    margin: 0 auto;
+  }
+
+  /* The stage keeps its desktop geometry (fixed px slots) and is
+     just scaled as a whole — transform doesn't reflow layout, so a
+     negative bottom margin reclaims the vertical space the scale-down
+     leaves behind. align-self: center (rather than margin: auto,
+     which collapses to 0 once the item is wider than its container)
+     is what keeps the overflow symmetric so .winners-panel's
+     overflow: hidden clips it evenly on both sides.
+     flex: none overrides the desktop "flex: 1" — on this stacked
+     (column) layout that shorthand's flex-basis: 0% would apply to
+     the vertical main axis instead of the horizontal one, collapsing
+     the stage to 0 height since its panel has no fixed height to
+     flex-grow against. */
+  .winners-stage {
+    flex: none;
+    align-self: center;
+    width: 750px;
+    margin: 8px 0 -150px;
+    transform: scale(0.66);
+    transform-origin: top center;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    padding: 10px 16px;
+  }
+
+  .hero-main {
+    padding: 104px 16px 40px;
+  }
+
+  .cta-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn {
+    justify-content: center;
+  }
+
+  .recent {
+    padding: 56px 0 64px;
+  }
+
+  .article-card {
+    width: 210px;
+    padding: 16px;
+  }
+
+  .winners {
+    padding: 40px 4vw 56px;
+  }
+
+  .winners-panel {
+    border-radius: 26px;
+    padding: 36px 20px 32px;
+  }
+
+  .winners-pill-wrap {
+    width: 240px;
+  }
+
+  .winners-stage {
+    transform: scale(0.46);
+    margin: 0 0 -238px;
+  }
+}
+
+/* ============================================================
+   Auth Modal
+   ============================================================ */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.auth-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+.auth-modal {
+  position: relative;
+  background: rgba(20, 20, 30, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 2rem 2.5rem 2.5rem;
+  width: min(520px, 94vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  transform: translateY(20px);
+  transition: transform 0.3s ease;
+  /* Firefox has no gradient/glow equivalent to the ::-webkit- rules
+     below, just a flat thumb/track color pair — solid accent red is
+     the closest match to the site's look it can render. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) rgba(255, 255, 255, 0.06);
+}
+.auth-overlay.open .auth-modal {
+  transform: translateY(0);
+}
+
+/* Chromium/Safari scrollbar, restyled to read as part of the site
+   rather than OS chrome: same red gradient + glow as .btn-primary,
+   as a rounded pill inset in a faint track — not just a gray line. */
+.auth-modal::-webkit-scrollbar {
+  width: 10px;
+}
+.auth-modal::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+  margin-block: 18px;
+}
+.auth-modal::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--accent), var(--accent-dark));
+  border-radius: 999px;
+  border: 2px solid rgba(20, 20, 30, 0.92);
+  background-clip: padding-box;
+  box-shadow: 0 0 10px rgba(255, 77, 61, 0.5);
+}
+.auth-modal::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ff6a5c, var(--accent));
+  box-shadow: 0 0 14px rgba(255, 77, 61, 0.7);
+}
+.auth-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.2rem;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 1.6rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s;
+}
+.auth-close:hover { color: #fff; }
+
+/* Tabs */
+.auth-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.8rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 0.75rem;
+}
+.auth-tab {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.45);
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  transition: color 0.2s, background 0.2s;
+}
+.auth-tab:hover { color: #fff; background: rgba(255,255,255,0.08); }
+.auth-tab.active {
+  color: #fff;
+  background: var(--accent);
+}
+
+/* Fields */
+.auth-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  /* Grid items default to min-width:auto, which factors in a child's
+     intrinsic minimum size — a native <input type="file">'s built-in
+     "no file chosen" label can be wide enough to force that, pushing
+     the modal into a horizontal scrollbar. This lets it shrink to fit
+     instead. */
+  min-width: 0;
+}
+.auth-field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.auth-field input {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  color: #fff;
+  font-size: 0.95rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.auth-field input::placeholder { color: rgba(255,255,255,0.3); }
+.auth-field input:focus {
+  border-color: var(--accent);
+  background: rgba(255,255,255,0.1);
+}
+
+/* Vertical rhythm between stacked fields — only .auth-field's own
+   label-to-input gap (0.4rem) existed before, so successive fields in
+   a single-column form (login, or publish's title/category/textarea)
+   sat right on top of each other with no breathing room. Scoped to
+   direct children only, so it doesn't also add spacing *inside*
+   .auth-fields-grid, which already spaces its own cells via `gap`. */
+.auth-form > .auth-field,
+.auth-form > .auth-fields-grid {
+  margin-top: 1.1rem;
+}
+.auth-form > .auth-field:first-child,
+.auth-form > .auth-fields-grid:first-child {
+  margin-top: 0;
+}
+
+/* ============================================================
+   School / university autocomplete (regSchool)
+   — a typeahead dropdown, like the school-lookup suggestions on
+   education-portal sign-up forms, so students pick their school
+   instead of typing it freehand.
+   ============================================================ */
+.autocomplete-wrap {
+  position: relative;
+}
+.autocomplete-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  max-height: 230px;
+  overflow-y: auto;
+  background: rgba(18, 18, 26, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+  display: none;
+}
+.autocomplete-list.open {
+  display: block;
+}
+.autocomplete-item {
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+}
+.autocomplete-item mark {
+  background: none;
+  color: var(--accent);
+  font-weight: 700;
+}
+.autocomplete-item:hover,
+.autocomplete-item.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.autocomplete-empty {
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Error message */
+.auth-error {
+  color: #ff6b6b;
+  font-size: 0.88rem;
+  min-height: 1.2em;
+  margin: 0.5rem 0;
+}
+
+/* Submit button */
+.auth-submit {
+  margin-top: 1.2rem;
+  width: 100%;
+  padding: 0.85rem;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.auth-submit:hover  { background: var(--accent-dark); transform: translateY(-1px); }
+.auth-submit:active { transform: translateY(0); }
+.auth-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* ============================================================
+   Textarea / select / file input inside a modal form — these three
+   never inherited the dark styling .auth-field input has (only the
+   plain text/email/password rule matched), so they were rendering as
+   bare, white, OS-default controls.
+   ============================================================ */
+.auth-field textarea {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  color: #fff;
+  font-size: 0.95rem;
+  font-family: inherit;
+  line-height: 1.5;
+  outline: none;
+  resize: vertical;
+  min-height: 120px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.auth-field textarea::placeholder { color: rgba(255, 255, 255, 0.3); }
+.auth-field textarea:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* appearance:none clears the OS-drawn box + arrow so the closed
+   select matches every other field; the option list itself is still
+   drawn by the OS when open (browsers don't allow full styling of
+   it) — setting background/color on <option> at least makes Chromium
+   and Firefox render that popup dark instead of the default gray. */
+.auth-field select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.07)
+    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3e%3cpath d='M4 6.5l4 4 4-4' stroke='%23ffffff' stroke-opacity='0.55' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")
+    no-repeat right 14px center;
+  background-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 0.7rem 2.2rem 0.7rem 1rem;
+  color: #fff;
+  font-size: 0.95rem;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.auth-field select:focus {
+  border-color: var(--accent);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+.auth-field select option {
+  background-color: #1a1f2b;
+  color: #fff;
+}
+
+/* File inputs largely resist styling except for their button part
+   (::file-selector-button, well-supported now) — the surrounding box
+   is themed to match, and width/box-sizing keeps it from overflowing
+   the modal the way its native intrinsic width otherwise would. */
+.auth-field input[type='file'] {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.auth-field input[type='file']::file-selector-button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 0.5rem 0.9rem;
+  margin-right: 0.8rem;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.auth-field input[type='file']::file-selector-button:hover {
+  background: var(--accent-dark);
+}
+
+/* ============================================================
+   Publish Article modal
+   ============================================================ */
+.publish-modal {
+  width: min(600px, 94vw);
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 1.4rem;
+}
+
+/* "Проверить ИИ" + "Опубликовать" were both falling back to the same
+   full-width solid-red .auth-submit style, stacked one per line —
+   this puts them side by side and gives the AI check a quieter,
+   secondary look so the primary publish action still stands out. */
+.publish-ai-row {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1.3rem;
+}
+.publish-ai-row .auth-submit {
+  width: auto;
+  flex: 1;
+  margin-top: 0;
+}
+.ai-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.ai-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+@media (max-width: 480px) {
+  .publish-ai-row {
+    flex-direction: column;
+  }
+}
+
+/* AI check result panel — grammar/profanity/fact-check summary shown
+   after "Проверить ИИ" runs. */
+.ai-check-result {
+  margin-top: 0.6rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.ai-verdict {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+}
+.ai-verdict--approved     { color: #4ade80; }
+.ai-verdict--needs_review { color: #facc15; }
+.ai-verdict--rejected     { color: #ff6b6b; }
+.ai-summary {
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0 0 0.3rem;
+}
+.ai-note {
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0.4rem 0 0.2rem;
+}
+.ai-note--bad { color: #ff8787; }
+.ai-note--muted { color: rgba(255, 255, 255, 0.45); font-size: 0.8rem; }
+.ai-facts {
+  margin: 0.2rem 0 0;
+  padding-left: 1.2rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+.ai-facts li { margin-bottom: 0.2rem; }
+
+/* Word-level diff — what the AI actually changed in the draft. */
+.ai-diff {
+  margin-top: 0.3rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.diff-removed {
+  color: #ff8787;
+  background: rgba(255, 107, 107, 0.15);
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 135, 135, 0.7);
+}
+.diff-added {
+  color: #7ee787;
+  background: rgba(126, 231, 135, 0.15);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ============================================================
+   Top-10 Weekly modal
+   ============================================================ */
+.top10-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.top10-loading {
+  text-align: center;
+  padding: 2rem 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+}
+.top10-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.65rem 0.9rem;
+  transition: background 0.15s ease;
+}
+.top10-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.top10-rank {
+  flex-shrink: 0;
+  width: 32px;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.45);
+}
+.top10-info {
+  flex: 1;
+  min-width: 0;
+}
+.top10-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.top10-meta {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.15rem;
+}
+.top10-pts {
+  flex-shrink: 0;
+  text-align: right;
+}
+.top10-weekly {
+  font-weight: 800;
+  font-size: 0.88rem;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.top10-weekly span {
+  font-weight: 500;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: 0.2rem;
+}
+.top10-total {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 0.15rem;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   User nav (shown after login)
+   ============================================================
+   Previously four visually separate pills (avatar+name text, a points
+   pill, a logout pill) all at the same weight — read as clutter, and
+   put "Выйти" at the same visual strength as the primary "Войти" CTA
+   it replaces. Regrouped into one identity chip (avatar + name/points)
+   that owns the glass-pill treatment, with logout demoted to a quiet
+   text action beside it — matches how the brand mark on the left reads
+   as a single unit instead of a row of separate parts. */
+.user-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 5px 18px 5px 5px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+.user-chip:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+.user-chip:active {
+  transform: translateY(0);
+}
+
+.user-chip-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.user-nav-name {
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.user-nav-points {
+  font-size: 0.72rem;
+  font-weight: 700;
+  /* Warm gold rather than the chip's neutral white/grey — reads as a
+     reward, echoing the ⭐ it's paired with, instead of just more UI text. */
+  color: #ffcf6b;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.user-nav-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 35% 30%, var(--maroon) 0%, var(--maroon-dark) 100%);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Deliberately quiet — logging out is a rare, low-stakes action and
+   shouldn't compete with the identity chip next to it for attention. */
+.logout-link {
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 999px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.logout-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+.user-nav-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ============================================================
+   Profile modal
+   ============================================================ */
+.profile-modal {
+  width: min(480px, 94vw);
+  text-align: center;
+}
+
+/* ---------- Профиль / Друзья tabs ---------- */
+.profile-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0 0 1.2rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.profile-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.profile-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+.profile-tab.active {
+  color: #fff;
+  background: rgba(255, 77, 61, 0.16);
+}
+.profile-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+.profile-panel[hidden] {
+  display: none;
+}
+
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 0.4rem;
+  margin-bottom: 1.4rem;
+}
+.profile-avatar-wrap {
+  position: relative;
+  margin-bottom: 1rem;
+}
+.profile-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 35% 30%, var(--maroon) 0%, var(--maroon-dark) 100%);
+  border: 3px solid rgba(255, 77, 61, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.profile-avatar span {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* A real <button> now (opens the hidden file input below it) rather
+   than a decorative span — reset to the same look it had, plus a
+   hover/active cue and a disabled state while the upload is in flight. */
+.profile-avatar-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: rgba(20, 20, 30, 0.92);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.profile-avatar-badge:hover {
+  background: rgba(40, 40, 55, 0.95);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.profile-avatar-badge:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+/* Camera glyph as a real (currentColor) SVG icon rather than an emoji —
+   emoji render as a colorful platform-specific pictograph that clashes
+   with the flat dark UI; the icon instead sits in the same muted grey
+   as every other secondary glyph on the site. The path itself (Feather's
+   "camera") is balanced within its 24x24 viewBox, so flex-centering the
+   icon here actually centers its visual weight too — the earlier
+   hand-drawn path wasn't symmetric and read as off-center. */
+.profile-avatar-badge svg {
+  width: 15px;
+  height: 15px;
+  color: rgba(255, 255, 255, 0.55);
+  display: block;
+}
+/* Was a plain <h2> — now an <input>, reset back to reading like a
+   heading (transparent, no border/padding) until it's focused, when a
+   bottom rule appears as the only cue that it's actually editable. */
+.profile-name-input {
+  width: 100%;
+  max-width: 280px;
+  background: none;
+  border: none;
+  border-bottom: 1.5px solid transparent;
+  color: #fff;
+  font-family: inherit;
+  font-size: 1.3rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 0 0 0.15rem;
+  margin-bottom: 0.6rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.profile-name-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 700;
+}
+.profile-name-input:hover {
+  border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+.profile-name-input:focus {
+  border-bottom-color: var(--accent);
+}
+.profile-level-badge {
+  display: inline-block;
+  padding: 0.3rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 77, 61, 0.15);
+  border: 1px solid rgba(255, 77, 61, 0.4);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+.profile-stats {
+  display: grid;
+  /* minmax(0, 1fr) rather than a bare 1fr — grid otherwise sizes each
+     column to fit its content's min-content width, so one long,
+     unbreakable school name (e.g. "НИШ ФМН Талдыкорган") would stretch
+     its column past the other two instead of wrapping inside it. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 1.6rem;
+}
+.profile-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 0.8rem 0.4rem;
+}
+.profile-stat-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  text-align: center;
+}
+.profile-stat-value {
+  font-size: 0.85rem;
+  line-height: 1.3;
+  font-weight: 800;
+  color: #fff;
+  text-align: center;
+  max-width: 100%;
+  /* Prefer wrapping at a space; only break inside a word (with a
+     hyphen, not a bare mid-syllable cut) when a single word still
+     can't fit the column on its own. */
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+.profile-stat-points {
+  color: var(--accent);
+  font-size: 1.15rem;
+}
+/* Школа/ВУЗ and Класс/Курс are <input>s now, sized to disappear into
+   the same box .profile-stat-value used to just sit in — same font,
+   same center alignment, no visible field chrome until focus. */
+.profile-stat-input {
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 0.1rem 0.2rem;
+  outline: none;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.profile-stat-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 700;
+}
+.profile-stat-input:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.profile-stat-input:focus {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+
+/* Область — the one editable field without its own stat box (region
+   isn't shown elsewhere in the UI), styled like a standard form field
+   instead so it doesn't invent a fourth ad-hoc look. */
+.profile-field {
+  text-align: left;
+  margin-bottom: 1.2rem;
+}
+.profile-field label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 0.4rem;
+}
+.profile-field input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.profile-field input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+.profile-field input:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.profile-save-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  margin-bottom: 1.6rem;
+}
+.profile-save-hint {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  flex: 1;
+  text-align: left;
+}
+.profile-save-hint.is-success { color: #7ee787; }
+.profile-save-hint.is-error { color: #ff8787; }
+.profile-save-btn {
+  width: auto;
+  margin-top: 0;
+  padding: 0.6rem 1.3rem;
+  font-size: 0.85rem;
+}
+.profile-save-btn:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.35);
+  cursor: default;
+  transform: none;
+}
+
+.profile-articles {
+  text-align: left;
+}
+.profile-articles-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 0.9rem;
+}
+.profile-articles-count {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65);
+}
+.profile-articles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.profile-articles-empty {
+  text-align: center;
+  padding: 1.6rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.85rem;
+}
+.profile-article-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.6rem 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-align: left;
+}
+.profile-article-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.profile-article-info {
+  flex: 1;
+  min-width: 0;
+}
+.profile-article-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-article-meta {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.15rem;
+}
+.profile-article-views {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   Friends tab
+   ============================================================ */
+.friends-search {
+  margin-bottom: 1.2rem;
+}
+.friends-search input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 0.65rem 1.1rem;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.friends-search input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+.friends-search input:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.friends-section {
+  text-align: left;
+  margin-top: 1.4rem;
+}
+.friends-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 0.7rem;
+}
+.friends-section-count {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.friends-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.friends-empty,
+.friends-loading {
+  text-align: center;
+  padding: 1rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.82rem;
+}
+
+.friend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+}
+.friend-row-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 35% 30%, var(--maroon) 0%, var(--maroon-dark) 100%);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.friend-row-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.friend-row-info {
+  flex: 1;
+  min-width: 0;
+}
+.friend-row-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.friend-row-meta {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.friend-row-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+/* Same quiet-pill language as .article-owner-btn — a set of small
+   secondary actions that shouldn't outweigh the row's own content. */
+.friend-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+  font-family: inherit;
+}
+.friend-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.friend-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.friend-btn--primary {
+  background: rgba(255, 77, 61, 0.18);
+  border-color: rgba(255, 77, 61, 0.4);
+  color: #fff;
+}
+.friend-btn--primary:hover {
+  background: rgba(255, 77, 61, 0.3);
+}
+.friend-btn--danger {
+  background: rgba(255, 77, 61, 0.12);
+  border-color: rgba(255, 77, 61, 0.35);
+  color: #ff8787;
+}
+.friend-btn--danger:hover {
+  background: rgba(255, 77, 61, 0.22);
+}
+
+@media (max-width: 480px) {
+  .auth-fields-grid { grid-template-columns: 1fr; }
+  .auth-modal { padding: 1.5rem 1.2rem 2rem; }
+  .profile-stats { grid-template-columns: 1fr; }
+  .friend-row { flex-wrap: wrap; }
+  .friend-row-actions { width: 100%; justify-content: flex-end; }
+}
+
+/* ============================================================
+   Catalog page (catalog.html)
+   ============================================================
+   A dark working panel rather than the home page's video-hero look —
+   this is a list/filter tool the reader returns to, not a landing
+   page, so it trades the sky-photo glass aesthetic for flatter,
+   higher-contrast panels. Everything here is scoped under
+   body.catalog-page (or catalog-prefixed classes) so it can't bleed
+   into the home page, which keeps the original look. */
+
+/* Both layers are position:fixed (same trick as .scene on the home
+   page) rather than painted as body's own background — the shared
+   `html, body { height: 100% }` rule caps body's own box at one
+   viewport tall, so a background painted directly on it would stop
+   partway down any page whose content runs past 100vh. Fixed layers
+   don't have that problem: they simply stay pinned behind everything,
+   however long the page actually is. */
+.catalog-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(1100px 620px at 12% -10%, rgba(255, 77, 61, 0.14), transparent 60%),
+    radial-gradient(900px 560px at 100% 0%, rgba(138, 31, 43, 0.18), transparent 55%),
+    linear-gradient(180deg, #0c0f16 0%, #090b11 100%);
+}
+
+/* Faint dot-grid for depth, fading out toward the bottom — echoes the
+   grid texture inside .winners-panel elsewhere on the site, just
+   applied to the whole page here instead of one card. */
+.catalog-page::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 25%, transparent 80%);
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 25%, transparent 80%);
+}
+
+/* Active nav-pill link stays underlined instead of only on hover */
+.nav-center a.active::after {
+  right: 0;
+}
+
+/* ---------- Two-column layout: article shelf + filter sidebar ---------- */
+/* Top padding clears the fixed .topbar (~86px tall incl. its own top
+   offset) since there's no promotional header above this anymore —
+   same idea as .hero-main on the home page. */
+.catalog-layout {
+  position: relative;
+  z-index: 5;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 128px 28px 110px;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 32px;
+  align-items: start;
+}
+
+.catalog-main {
+  min-width: 0;
+}
+
+.catalog-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+/* Search sits on the left as its own glass pill — background-blur +
+   translucent border, the same language as the topbar's glass nav,
+   which stands out against the toolbar's flat dark panels on
+   purpose: it's the one "floating" control up here. */
+.catalog-toolbar-search {
+  flex: 1 1 260px;
+  max-width: 380px;
+}
+
+.catalog-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.catalog-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+}
+
+.catalog-toolbar .btn {
+  padding: 11px 22px;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .catalog-toolbar-search {
+    max-width: none;
+    flex-basis: 100%;
+    order: -1;
+  }
+
+  .catalog-toolbar-right {
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+/* Shown while there's nothing (yet) to fill the shelf, or while the
+   current filters match nothing — same dashed "empty slot" treatment
+   either way, just a different icon/message/CTA. */
+.catalog-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 72px 32px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 20px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
+}
+
+.catalog-empty-icon {
+  font-size: 42px;
+  margin-bottom: 6px;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
+}
+
+.catalog-empty h3 {
+  font-size: 19px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.catalog-empty p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.55);
+  max-width: 380px;
+}
+
+.catalog-empty .btn {
+  margin-top: 10px;
+}
+
+/* ---------- Filter sidebar ---------- */
+.catalog-sidebar {
+  position: sticky;
+  top: 106px;
+}
+
+.catalog-filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  background: linear-gradient(165deg, #141924 0%, #10141c 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 24px 22px;
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.45);
+}
+
+.catalog-filter-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: #fff;
+  padding-bottom: 16px;
+  margin-bottom: -4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.catalog-filter-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 10px;
+}
+
+/* The magnifier icon is painted directly as the input's own
+   background-image (not a sibling/pseudo-element overlay) — a native
+   <input>'s own background always wins that box's paint, so a
+   separately-positioned pseudo-element behind/beside it is the more
+   fragile route; baking the icon into the same background layer as
+   the input's fill color guarantees it actually shows. */
+.catalog-search-wrap input {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.08);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3e%3ccircle cx='11' cy='11' r='7' stroke='white' stroke-opacity='0.55' stroke-width='2'/%3e%3cpath d='M21 21l-4.3-4.3' stroke='white' stroke-opacity='0.55' stroke-width='2' stroke-linecap='round'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: 15px center;
+  background-size: 15px 15px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 11px 16px 11px 42px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.catalog-search-wrap input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.catalog-search-wrap input:focus {
+  border-color: var(--accent);
+  background-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 3px rgba(255, 77, 61, 0.16);
+}
+
+/* ---------- Custom sort dropdown (button + listbox) ---------- */
+/* Not a native <select> — its open option list can't be fully
+   restyled (stays OS-drawn), so this is built the same way as the
+   language switcher in the topbar: a button toggles a positioned
+   list, fully themeable since nothing here is browser-native chrome. */
+.catalog-select {
+  position: relative;
+}
+
+.catalog-select-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.catalog-select-btn:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.catalog-select.open .catalog-select-btn {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.catalog-select-chevron {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.5);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.catalog-select.open .catalog-select-chevron {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+.catalog-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  background: #161b26;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.catalog-select.open .catalog-select-menu {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.catalog-select-menu li {
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 0.87rem;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.catalog-select-menu li:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.catalog-select-menu li.is-selected {
+  background: rgba(255, 77, 61, 0.14);
+  color: #fff;
+  font-weight: 600;
+}
+
+.catalog-select-menu li.is-selected::after {
+  content: '✓';
+  float: right;
+  color: var(--accent);
+}
+
+.catalog-filter-options {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* Custom checkbox: native ones read as a stray browser-default square
+   against this dark panel. appearance:none removes that, and the
+   check mark is drawn as a background-image (not a pseudo-element —
+   <input> is a replaced element, so ::before/::after aren't reliably
+   supported on it) so it works with just this one element, no extra
+   wrapper markup. */
+.catalog-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  border-radius: 9px;
+  font-size: 0.87rem;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.catalog-checkbox:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Toggled by catalog.js alongside the checkbox's own :checked state,
+   so the whole row reads as "selected" — a plain checked box is easy
+   to miss in a quick scan of six stacked options. */
+.catalog-checkbox.is-checked {
+  color: #fff;
+  background: rgba(255, 77, 61, 0.12);
+}
+
+.catalog-checkbox input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255, 255, 255, 0.24);
+  background-color: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.catalog-checkbox input[type='checkbox']:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.catalog-checkbox input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.catalog-checkbox input[type='checkbox']:checked {
+  background-color: var(--accent);
+  background-image:
+    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3e%3cpath d='M3.5 8.6l3 3 6-7.2' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e"),
+    linear-gradient(135deg, var(--accent), var(--accent-dark));
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 11px 11px, 100% 100%;
+  border-color: transparent;
+  transform: scale(1.08);
+}
+
+.catalog-reset-btn {
+  width: 100%;
+  justify-content: center;
+  font-size: 0.85rem;
+  padding: 10px 16px;
+}
+
+/* Grid cards reuse .article-card's tag/heading/meta styling (defined
+   earlier for the homepage marquee) — this cancels the marquee's fixed
+   width, tilt and video-tuned glass/blur treatment, swapping in flat
+   dark panels with an accent rail instead. Declared after .article-card
+   so it wins on equal specificity. */
+.catalog-card {
+  width: auto;
+  flex: none;
+  transform: none;
+  background: linear-gradient(160deg, #141924 0%, #10141c 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid var(--accent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.catalog-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.catalog-card h3,
+.catalog-card .article-author,
+.catalog-card .article-meta {
+  text-shadow: none;
+}
+
+.catalog-card .article-meta {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 900px) {
+  .catalog-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-sidebar {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .catalog-layout {
+    padding: 104px 16px 64px;
+    gap: 22px;
+  }
+
+  .catalog-empty {
+    padding: 48px 20px;
+  }
+}
+
+/* ============================================================
+   Article Reader Modal
+   ============================================================ */
+.article-modal {
+  width: min(720px, 94vw);
+  /* Deliberately NOT scroll-behavior:smooth — the wheel-scroll JS
+     (enableSmoothWheelScroll) already eases every scrollTop write
+     itself frame by frame; layering the browser's own smooth-scroll
+     on top of that fights each incremental write with a competing
+     animation and the position stalls instead of easing. */
+}
+
+.article-reader-loading {
+  padding: 2rem 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.article-reader-gallery {
+  display: flex;
+  gap: 0.6rem;
+  overflow-x: auto;
+  margin: -0.5rem -0.5rem 1rem;
+  padding: 0.5rem;
+}
+.article-reader-gallery img {
+  height: 180px;
+  width: auto;
+  max-width: 90%;
+  border-radius: 12px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.article-reader-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.3;
+  margin: 0.6rem 0 0.5rem;
+}
+
+.article-reader-byline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.5rem;
+  align-items: baseline;
+  margin-bottom: 0.8rem;
+}
+.article-reader-author {
+  font-weight: 700;
+  color: #fff;
+  font-size: 0.92rem;
+}
+.article-reader-meta {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+}
+
+/* Only rendered when the logged-in user is this article's own author —
+   everyone else's articles stay view-only, no buttons shown at all. */
+.article-owner-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.article-owner-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.article-owner-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.article-owner-btn--danger {
+  background: rgba(255, 77, 61, 0.12);
+  border-color: rgba(255, 77, 61, 0.35);
+  color: #ff8787;
+}
+.article-owner-btn--danger:hover {
+  background: rgba(255, 77, 61, 0.22);
+}
+
+.article-reader-stats {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.85rem;
+  margin-bottom: 1.2rem;
+}
+
+.article-reader-body {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.98rem;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding-bottom: 1.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 1.2rem;
+}
+
+.article-reader-rating {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.article-rating-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.article-rating-value {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.88rem;
+}
+.article-rating-empty {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.88rem;
+}
+
+.article-rate-own {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.article-rate-own-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+}
+
+/* Review textarea — only shown once the reader has actually rated
+   (rating is the trigger; the review text is an optional add-on to it),
+   otherwise a quiet hint takes its place. */
+.article-review-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.article-review-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+}
+.article-review-compose textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 70px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.article-review-compose textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.article-review-submit {
+  align-self: flex-start;
+  width: auto;
+  margin-top: 0;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.85rem;
+}
+.article-review-hint {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.82rem;
+}
+
+.star-row {
+  display: inline-flex;
+  gap: 0.15rem;
+}
+.star-row .star {
+  font-size: 1.15rem;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.25);
+}
+.star-row .star--filled {
+  color: #ffb020;
+}
+.star-row--interactive .star {
+  cursor: pointer;
+  transition: transform 0.12s ease, color 0.12s ease;
+}
+/* Hovering a star previews the rating it would set — it and every star
+   before it light up, not just the one under the pointer. Relies on
+   the stars being emitted in reverse DOM order (5→1) and flexed back
+   via row-reverse, so the CSS-only "~" sibling trick can reach earlier
+   (visually) stars through later (in DOM) ones. */
+.star-row--interactive {
+  flex-direction: row-reverse;
+}
+.star-row--interactive .star:hover,
+.star-row--interactive .star:hover ~ .star {
+  transform: scale(1.15);
+  color: #ffb020;
+}
+
+/* ---------- Reviews list (bottom of the article reader) ---------- */
+.article-reviews {
+  margin-top: 1.6rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.article-reviews-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 1rem;
+}
+.article-reviews-count {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65);
+}
+.article-reviews-empty {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.85rem;
+}
+.article-review {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.8rem 0.95rem;
+}
+.article-review + .article-review {
+  margin-top: 0.6rem;
+}
+.article-review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.2rem;
+}
+.article-review-author {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #fff;
+}
+.article-review-meta {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 0.4rem;
+}
+.article-review-text {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 560px) {
+  .article-reader-title {
+    font-size: 1.25rem;
+  }
+  .article-reader-gallery img {
+    height: 140px;
+  }
+}
