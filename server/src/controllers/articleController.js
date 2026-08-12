@@ -47,7 +47,7 @@ export const createArticle = async (req, res) => {
           select: {
             id: true,
             fullName: true,
-            school: true,
+            schoolName: true,
             grade: true,
             region: true,
           },
@@ -77,7 +77,7 @@ export const createArticle = async (req, res) => {
       article: {
         ...newArticle,
         images: imagePaths,
-        authorMeta: `${newArticle.author.school} · ${newArticle.author.grade}`,
+        authorMeta: `${newArticle.author.schoolName} · ${newArticle.author.grade}`,
         viewsFormatted: '0',
       },
     });
@@ -100,7 +100,7 @@ export const getRecentArticles = async (req, res) => {
           select: {
             id: true,
             fullName: true,
-            school: true,
+            schoolName: true,
             grade: true,
             region: true,
           },
@@ -124,7 +124,7 @@ export const getRecentArticles = async (req, res) => {
         tag: a.category,
         tagClass,
         author: a.author ? a.author.fullName : 'Аноним',
-        meta: a.author ? `${a.author.school} · ${a.author.grade}` : 'Студент',
+        meta: a.author ? `${a.author.schoolName} · ${a.author.grade}` : 'Студент',
         views: formatViews(a.viewsCount),
         viewsRaw: a.viewsCount,
         images: JSON.parse(a.images || '[]'),

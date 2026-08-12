@@ -4,7 +4,8 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-import { registerUser, loginUser, getUserProfile } from '../controllers/authController.js';
+import { registerUser, loginUser } from '../controllers/authController.js';
+import { GetProfile, UpdateProfile, GetUserArticles, UploadAvatar } from '../controllers/userController.js';
 import { createArticle, getRecentArticles, incrementViews } from '../controllers/articleController.js';
 import { addPoints, getWeeklyTop, getSchoolLeaderboard, getWinnersList } from '../controllers/gamificationController.js';
 import { aiEditDraft } from '../controllers/aiController.js';
@@ -49,7 +50,12 @@ const upload = multer({
 // 1. Пользователи и Авторизация
 router.post('/auth/register', registerUser);
 router.post('/auth/login', loginUser);
-router.get('/users/profile', authenticateToken, getUserProfile);
+router.get('/users/profile', authenticateToken, GetProfile);
+router.put('/users/profile', authenticateToken, UpdateProfile);
+router.post('/users/profile/avatar', authenticateToken, upload.single('avatar'), UploadAvatar);
+router.get('/users/profile/articles', authenticateToken, GetUserArticles);
+router.get('/users/:userId', GetProfile);
+router.get('/users/:userId/articles', GetUserArticles);
 
 // 2. Контент (Лента и Статьи)
 router.post('/articles', authenticateToken, upload.array('images', 5), createArticle);

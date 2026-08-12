@@ -1,4 +1,5 @@
 import prisma from '../db.js';
+import { CheckAndUpgradeLevel } from './userController.js';
 
 // 1. AddPoints
 export const addPoints = async (req, res) => {
@@ -16,15 +17,15 @@ export const addPoints = async (req, res) => {
     }
 
     const updatedPoints = user.points + points;
-    const newLevel = Math.floor(updatedPoints / 100) + 1;
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         points: updatedPoints,
-        level: newLevel,
       },
     });
+
+    const newLevel = await CheckAndUpgradeLevel(userId);
 
     await prisma.pointLog.create({
       data: {
@@ -38,7 +39,7 @@ export const addPoints = async (req, res) => {
       message: `Успешно начислено +${points} баллов!`,
       userId: updatedUser.id,
       points: updatedUser.points,
-      level: updatedUser.level,
+      level: newLevel,
     });
   } catch (error) {
     console.error('Error in AddPoints:', error);
@@ -79,7 +80,7 @@ export const getWeeklyTop = async (req, res) => {
         select: {
           id: true,
           fullName: true,
-          school: true,
+          schoolName: true,
           grade: true,
           points: true,
           level: true,
@@ -90,7 +91,7 @@ export const getWeeklyTop = async (req, res) => {
         rank: rank + 1,
         id: u.id,
         name: u.fullName,
-        meta: `${u.school} · ${u.grade}`,
+        meta: `${u.schoolName} · ${u.grade}`,
         weeklyPoints: u.points,
         totalPoints: u.points,
         level: u.level,
@@ -105,7 +106,7 @@ export const getWeeklyTop = async (req, res) => {
       select: {
         id: true,
         fullName: true,
-        school: true,
+        schoolName: true,
         grade: true,
         points: true,
         level: true,
@@ -120,7 +121,7 @@ export const getWeeklyTop = async (req, res) => {
         rank: index + 1,
         id: item.userId,
         name: user ? user.fullName : 'Пользователь',
-        meta: user ? `${user.school} · ${user.grade}` : 'Студент',
+        meta: user ? `${user.schoolName} · ${user.grade}` : 'Студент',
         weeklyPoints: item._sum.points || 0,
         totalPoints: user ? user.points : 0,
         level: user ? user.level : 1,
@@ -138,7 +139,7 @@ export const getWeeklyTop = async (req, res) => {
 export const getSchoolLeaderboard = async (req, res) => {
   try {
     const schoolStats = await prisma.user.groupBy({
-      by: ['school'],
+      by: ['schoolName'],
       _sum: {
         points: true,
       },
@@ -155,7 +156,7 @@ export const getSchoolLeaderboard = async (req, res) => {
 
     const leaderboard = schoolStats.map((item, index) => ({
       rank: index + 1,
-      school: item.school,
+      school: item.schoolName,
       totalPoints: item._sum.points || 0,
       studentsCount: item._count.id,
     }));

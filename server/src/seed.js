@@ -15,12 +15,12 @@ export async function seedDatabase() {
 
     // Create demo users from Kazakh schools and universities
     const usersData = [
-      { email: 'aigerim@nis.kz', fullName: 'Айгерим Қайратова', region: 'Алматы', district: 'Бостандыкский', school: 'НИШ ФМН', grade: '11 класс', points: 450, level: 5 },
-      { email: 'erlan@kbtu.kz', fullName: 'Ерлан Смагулов', region: 'Алматы', district: 'Алмалинский', school: 'КБТУ', grade: '2 курс', points: 380, level: 4 },
-      { email: 'dana@nis.kz', fullName: 'Дана Ахметова', region: 'Астана', district: 'Есильский', school: 'НИШ ХБН', grade: '10 класс', points: 310, level: 4 },
-      { email: 'timur@kaznu.kz', fullName: 'Тимур Жаксыбеков', region: 'Алматы', district: 'Бостандыкский', school: 'КазНУ', grade: '3 курс', points: 290, level: 3 },
-      { email: 'askhat@enu.kz', fullName: 'Асхат Бекенов', region: 'Астана', district: 'Алматы', school: 'ЕНУ', grade: '4 курс', points: 260, level: 3 },
-      { email: 'daniyar@satbayev.kz', fullName: 'Данияр Сериков', region: 'Алматы', district: 'Медеуский', school: 'Satbayev University', grade: '1 курс', points: 220, level: 3 },
+      { email: 'aigerim@nis.kz', fullName: 'Айгерим Қайратова', region: 'Алматы', district: 'Бостандыкский', schoolName: 'НИШ ФМН', grade: '11 класс', points: 450, level: 'Исследователь' },
+      { email: 'erlan@kbtu.kz', fullName: 'Ерлан Смагулов', region: 'Алматы', district: 'Алмалинский', schoolName: 'КБТУ', grade: '2 курс', points: 380, level: 'Исследователь' },
+      { email: 'dana@nis.kz', fullName: 'Дана Ахметова', region: 'Астана', district: 'Есильский', schoolName: 'НИШ ХБН', grade: '10 класс', points: 310, level: 'Исследователь' },
+      { email: 'timur@kaznu.kz', fullName: 'Тимур Жаксыбеков', region: 'Алматы', district: 'Бостандыкский', schoolName: 'КазНУ', grade: '3 курс', points: 290, level: 'Исследователь' },
+      { email: 'askhat@enu.kz', fullName: 'Асхат Бекенов', region: 'Астана', district: 'Алматы', schoolName: 'ЕНУ', grade: '4 курс', points: 260, level: 'Исследователь' },
+      { email: 'daniyar@satbayev.kz', fullName: 'Данияр Сериков', region: 'Алматы', district: 'Медеуский', schoolName: 'Satbayev University', grade: '1 курс', points: 220, level: 'Исследователь' },
     ];
 
     const users = [];

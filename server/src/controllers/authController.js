@@ -10,9 +10,9 @@ const calculateLevel = (points) => {
 // 1. RegisterUser
 export const registerUser = async (req, res) => {
   try {
-    const { email, password, fullName, region, district, school, grade } = req.body;
+    const { email, password, fullName, region, district, schoolName, grade } = req.body;
 
-    if (!email || !password || !fullName || !region || !district || !school || !grade) {
+    if (!email || !password || !fullName || !region || !district || !schoolName || !grade) {
       return res.status(400).json({ error: 'Пожалуйста, заполните все обязательные поля.' });
     }
 
@@ -32,10 +32,10 @@ export const registerUser = async (req, res) => {
         fullName,
         region,
         district,
-        school,
+        schoolName,
         grade,
         points: initialPoints,
-        level: initialLevel,
+        level: "Новичок",
         pointLogs: {
           create: {
             points: initialPoints,
@@ -49,7 +49,7 @@ export const registerUser = async (req, res) => {
         fullName: true,
         region: true,
         district: true,
-        school: true,
+        schoolName: true,
         grade: true,
         points: true,
         level: true,
@@ -125,7 +125,7 @@ export const getUserProfile = async (req, res) => {
         fullName: true,
         region: true,
         district: true,
-        school: true,
+        schoolName: true,
         grade: true,
         points: true,
         level: true,
@@ -149,8 +149,8 @@ export const getUserProfile = async (req, res) => {
       return res.status(404).json({ error: 'Пользователь не найден.' });
     }
 
-    // Recalculate level dynamically
-    user.level = calculateLevel(user.points);
+    // Level is now stored as string and handled by CheckAndUpgradeLevel, so no need to recalculate here
+    // user.level = calculateLevel(user.points);
 
     // Format article images JSON
     const formattedArticles = user.articles.map(article => ({

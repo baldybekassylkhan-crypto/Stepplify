@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
           password: document.getElementById('regPassword').value,
           region:   document.getElementById('regRegion').value,
           district: document.getElementById('regDistrict').value,
-          school:   document.getElementById('regSchool').value,
+          schoolName: document.getElementById('regSchool').value,
           grade:    document.getElementById('regGrade').value,
         }),
       });
@@ -325,6 +325,134 @@ document.addEventListener('DOMContentLoaded', () => {
       top10Overlay.setAttribute('aria-hidden', 'true');
     }
   });
+
+  // ============ Profile Modal ============
+  const profileOverlay = document.getElementById('profileOverlay');
+  const profileClose = document.getElementById('profileClose');
+
+  if (userNavName && profileOverlay) {
+    userNavName.addEventListener('click', async (e) => {
+      e.preventDefault();
+      profileOverlay.classList.add('open');
+      profileOverlay.setAttribute('aria-hidden', 'false');
+
+      const token = localStorage.getItem('stepplify_token');
+      const user = JSON.parse(localStorage.getItem('stepplify_user') || 'null');
+      if (!token || !user) return;
+
+      document.getElementById('profileName').textContent = user.fullName;
+      document.getElementById('profileSchool').textContent = user.schoolName || user.school || '-';
+      document.getElementById('profileGrade').textContent = user.grade || '-';
+      document.getElementById('profilePoints').textContent = user.points || 0;
+      
+      const articlesList = document.getElementById('profileArticlesList');
+      articlesList.innerHTML = '<div class="top10-loading">Загружаем профиль...</div>';
+
+      try {
+        const [profileRes, articlesRes] = await Promise.all([
+          fetch(`${API_URL}/users/profile`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_URL}/users/profile/articles`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          document.getElementById('profileName').textContent = profileData.fullName;
+          document.getElementById('profileLevel').textContent = profileData.level || 'Новичок';
+          document.getElementById('profileSchool').textContent = profileData.schoolName || profileData.school || '-';
+          document.getElementById('profileGrade').textContent = profileData.grade || '-';
+          document.getElementById('profilePoints').textContent = profileData.points || 0;
+          if (profileData.avatarUrl) {
+            document.getElementById('profileAvatarInner').innerHTML = `<img src="${profileData.avatarUrl}" alt="avatar" style="width:100%;height:100%;object-fit:cover;">`;
+          } else {
+            document.getElementById('profileAvatarInner').innerHTML = '👤';
+          }
+        }
+
+        if (articlesRes.ok) {
+          const articlesData = await articlesRes.json();
+          document.getElementById('profileArticlesCount').textContent = articlesData.length;
+          if (articlesData.length === 0) {
+            articlesList.innerHTML = '<div style="color:rgba(255,255,255,0.5);text-align:center;padding:20px;font-size:14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px dashed rgba(255,255,255,0.1);">У вас пока нет опубликованных статей.</div>';
+          } else {
+            articlesList.innerHTML = articlesData.map(a => `
+              <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; transition: background 0.2s, transform 0.2s; cursor: pointer;" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.transform='none'">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span style="background: rgba(255,255,255,0.1); color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;">${a.category || 'Без категории'}</span>
+                  <span style="color: rgba(255,255,255,0.5); font-size: 12px; font-weight: 600;">👁 ${a.viewsCount || 0}</span>
+                </div>
+                <div style="font-weight: 700; font-size: 15px; color: #fff; line-height: 1.4;">${a.title}</div>
+              </div>
+            `).join('');
+          }
+        } else {
+            articlesList.innerHTML = '<div class="auth-error">Не удалось загрузить статьи</div>';
+        }
+      } catch (err) {
+        articlesList.innerHTML = `<div class="auth-error">Ошибка: ${err.message}</div>`;
+      }
+    });
+
+    profileClose.addEventListener('click', () => {
+      profileOverlay.classList.remove('open');
+      profileOverlay.setAttribute('aria-hidden', 'true');
+    });
+
+    profileOverlay.addEventListener('click', (e) => {
+      if (e.target === profileOverlay) {
+        profileOverlay.classList.remove('open');
+        profileOverlay.setAttribute('aria-hidden', 'true');
+      }
+    });
+
+    // Avatar Upload Logic
+    const avatarWrapper = document.getElementById('profileAvatar');
+    const avatarOverlay = document.getElementById('avatarHoverOverlay');
+    const avatarInput = document.getElementById('avatarUploadInput');
+
+    avatarWrapper.addEventListener('mouseenter', () => avatarOverlay.style.opacity = '1');
+    avatarWrapper.addEventListener('mouseleave', () => avatarOverlay.style.opacity = '0');
+    avatarWrapper.addEventListener('click', () => avatarInput.click());
+
+    avatarInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const token = localStorage.getItem('stepplify_token');
+      if (!token) return;
+
+      avatarOverlay.textContent = '⏳';
+      avatarOverlay.style.opacity = '1';
+
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      try {
+        const res = await fetch(`${API_URL}/users/profile/avatar`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        const data = await res.json();
+        
+        if (res.ok && data.avatarUrl) {
+          // Update modal avatar
+          document.getElementById('profileAvatarInner').innerHTML = `<img src="${data.avatarUrl}" alt="avatar" style="width:100%;height:100%;object-fit:cover;">`;
+          // Update localStorage
+          const user = JSON.parse(localStorage.getItem('stepplify_user') || '{}');
+          user.avatarUrl = data.avatarUrl;
+          localStorage.setItem('stepplify_user', JSON.stringify(user));
+        } else {
+          alert(data.error || 'Ошибка при загрузке аватара');
+        }
+      } catch (err) {
+        alert('Ошибка сети: ' + err.message);
+      } finally {
+        avatarOverlay.textContent = '📷';
+        avatarOverlay.style.opacity = '0';
+        avatarInput.value = ''; // Reset input
+      }
+    });
+  }
 
   // Rotating headline tail — cycles through phrases with a fade/blur
   // swap, same idea as the hero on grader.cloud
