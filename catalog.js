@@ -4,8 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const countEl = document.getElementById('catalogCount');
   const searchInput = document.getElementById('catalogSearch');
-  const categoryBox = document.getElementById('catalogCategoryFilters');
   const resetBtn = document.getElementById('catalogResetBtn');
+  const regionChip = document.getElementById('catalogRegionChip');
+  const regionChipName = document.getElementById('catalogRegionChipName');
+  const regionChipClear = document.getElementById('catalogRegionChipClear');
 
   // Custom sort dropdown (button + listbox) — see the markup comment
   // in catalog.html for why this isn't a native <select>.
@@ -13,15 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const sortBtn = document.getElementById('catalogSortBtn');
   const sortValueEl = document.getElementById('catalogSortValue');
   const sortMenu = document.getElementById('catalogSortMenu');
-
-  const tagClassByCategory = {
-    'Наука': 'tag-science',
-    'Технологии': 'tag-tech',
-    'Экология': 'tag-eco',
-    'История': 'tag-history',
-    'Эссе': 'tag-essay',
-    'Психология': 'tag-psych',
-  };
 
   const API_URL = 'http://localhost:5000/api';
 
@@ -52,14 +45,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const state = {
     query: '',
-    categories: new Set(),
     sort: 'new',
+    // Arrives via ?region=... — set when a reader clicks a region on
+    // map.html instead of picked from a filter control on this page,
+    // so it's plain state rather than one more checkbox group.
+    region: new URLSearchParams(window.location.search).get('region') || null,
   };
 
   const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   const matchesFilters = (article) => {
-    if (state.categories.size && !state.categories.has(article.category)) return false;
+    if (state.region && article.region !== state.region) return false;
     if (!state.query) return true;
     const haystack = `${article.title} ${article.author} ${article.locationName || ''}`.toLowerCase();
     return haystack.includes(state.query);
@@ -160,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const renderCard = (a) => `
     <article class="article-card catalog-card" data-id="${a.id}">
-      <span class="tag ${tagClassByCategory[a.category] || 'tag-essay'}">${escapeHtml(a.category)}</span>
       <h3>${escapeHtml(a.title)}</h3>
       <div class="article-author">${escapeHtml(a.author)}</div>
       <div class="article-meta">
@@ -205,15 +200,29 @@ document.addEventListener('DOMContentLoaded', () => {
     return 'статей';
   }
 
+  function setRegionFilter(region) {
+    state.region = region || null;
+    if (regionChip) regionChip.hidden = !state.region;
+    if (regionChipName) regionChipName.textContent = state.region || '';
+    // Keep the URL in sync (so refresh/share preserves it, and clearing
+    // it doesn't leave a stale ?region= behind) without adding a
+    // history entry for what's just a filter toggle.
+    const url = new URL(window.location.href);
+    if (state.region) url.searchParams.set('region', state.region);
+    else url.searchParams.delete('region');
+    window.history.replaceState({}, '', url);
+  }
+
+  regionChipClear?.addEventListener('click', () => {
+    setRegionFilter(null);
+    renderCatalog();
+  });
+
   function resetFilters() {
     state.query = '';
-    state.categories.clear();
+    setRegionFilter(null);
     if (searchInput) searchInput.value = '';
     applySortSelection('new', { render: false });
-    categoryBox?.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-      cb.checked = false;
-      cb.closest('.catalog-checkbox')?.classList.remove('is-checked');
-    });
     renderCatalog();
   }
 
@@ -229,24 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
     searchRecordTimer = setTimeout(() => {
       window.stepplifyReading?.recordSearch(state.query);
     }, 600);
-  });
-
-  categoryBox?.addEventListener('change', (e) => {
-    const cb = e.target.closest('input[type="checkbox"]');
-    if (!cb) return;
-    cb.closest('.catalog-checkbox')?.classList.toggle('is-checked', cb.checked);
-    if (cb.checked) state.categories.add(cb.value);
-    else state.categories.delete(cb.value);
-    renderCatalog();
-  });
-
-  // Browsers sometimes restore checkbox state on reload before our
-  // listeners exist — sync the row highlight to match on load.
-  categoryBox?.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-    if (cb.checked) {
-      cb.closest('.catalog-checkbox')?.classList.add('is-checked');
-      state.categories.add(cb.value);
-    }
   });
 
   // Applies a sort choice to state + the button's label + which <li>
@@ -313,5 +304,6 @@ document.addEventListener('DOMContentLoaded', () => {
     applySortSelection('recommended', { render: false });
   }
 
+  setRegionFilter(state.region);
   loadArticles();
 });

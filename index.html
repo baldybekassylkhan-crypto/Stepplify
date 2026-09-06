@@ -30,9 +30,10 @@
       <span class="brand-name">Stepplify</span>
     </a>
 
-    <nav class="nav-center">
+    <nav class="nav-center" id="navCenter">
       <a href="catalog.html">Каталог статей</a>
       <a href="#aboutSection" id="aboutLink">О проекте</a>
+      <a href="map.html">Карта</a>
     </nav>
 
     <div class="nav-right">
@@ -55,22 +56,342 @@
           <button type="button" data-lang="rus">рус</button>
         </div>
       </div>
+      <!-- Only shown below the breakpoint where .nav-center (Каталог
+           статей / О проекте / Карта) gets hidden — without this those
+           links become completely unreachable on mobile. -->
+      <button type="button" class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Меню" aria-expanded="false" aria-controls="navCenter">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </header>
 
   <!-- ============ Hero content ============ -->
   <main class="hero-main">
     <div class="hero-content">
-      <h1 class="hero-title">Публикуй свои <span class="accent">исследования</span><br /><span class="rotator" id="rotator">со всего Казахстана</span></h1>
+      <!-- Break kept explicit rather than left to wrapping: it pins the
+           headline to three lines at every width, so the block is the
+           same height whatever the rotating phrase happens to be. -->
+      <h1 class="hero-title">Публикуй свои<br /><span class="accent">исследования</span><span class="rotator-slot"><span class="rotator" id="rotator">о своём крае</span></span></h1>
       <p class="hero-sub">Загружай статьи, получай отклики и находи читателей за минуты.</p>
 
       <div class="cta-row">
         <a href="#" class="btn btn-primary" id="publishBtn">Опубликовать статью <span class="arrow">→</span></a>
-        <a href="#" class="btn btn-secondary" id="top10Btn">Топ‑10 недели</a>
+        <a href="#" class="btn btn-secondary" id="top10Btn">Топ‑3 месяца</a>
       </div>
     </div>
   </main>
+
 </div>
+
+<!-- ============ Rotating-yurt facts section (scroll-scrubbed) ============
+     Replaces the growing-tree/fact-card version. #yurtSection is a tall
+     scroll "runway"; #yurtSticky pins to the viewport for the whole way
+     through it. Scrolling down spins the yurt on its own axis (one full
+     turn across the section) while the panel on the right cross-fades to
+     the next fact every 1/6 of the way; scrolling back up reverses both.
+
+     Progressive enhancement contract (mirrored in styles.css and
+     script.js): the markup below IS the no-JS / reduced-motion state — a
+     still yurt beside a plain, fully readable list of all six facts, in
+     normal page flow with no pin and no runway. script.js opts IN to the
+     scrubbed version by adding .js-yurt-active, and only when the visitor
+     hasn't asked for reduced motion. All six facts stay in the DOM even
+     when only one of them is visible, so screen readers still read the
+     lot in order and the panel never changes height (no layout shift). -->
+<section class="yurt-section" id="yurtSection">
+  <!-- Leading edge of the panel: a hairline that gets a single warm
+       sweep the first time it scrolls into view. -->
+  <span class="yurt-edge" id="yurtEdge" aria-hidden="true"></span>
+  <div class="yurt-sticky" id="yurtSticky">
+
+    <!-- Decorative backdrop: a low dawn sun glowing behind the yurt, the
+         steppe horizon it stands on, and a woven ornament band along the
+         foot of the section. Purely visual, hence aria-hidden. -->
+    <div class="yurt-backdrop" aria-hidden="true">
+      <!-- A few birds crossing the sky. The span carries the drift, the
+           path inside it the wing beat, so the two transforms never
+           fight over the same element. -->
+      <span class="yurt-bird yurt-bird-1">
+        <svg viewBox="-10 -7 20 14"><path d="M-9 1 Q-4.6 -6 0 -0.6 Q4.6 -6 9 1" /></svg>
+      </span>
+      <span class="yurt-bird yurt-bird-2">
+        <svg viewBox="-10 -7 20 14"><path d="M-9 1 Q-4.6 -6 0 -0.6 Q4.6 -6 9 1" /></svg>
+      </span>
+      <span class="yurt-bird yurt-bird-3">
+        <svg viewBox="-10 -7 20 14"><path d="M-9 1 Q-4.6 -6 0 -0.6 Q4.6 -6 9 1" /></svg>
+      </span>
+
+      <!-- The same point in the sky, twice over: the sun holds it through
+           the day and hands it to the moon once the light has gone. Both
+           are driven by the night factor script.js sets from the scroll,
+           so without JS the sun is simply up and the moon is not. -->
+      <span class="yurt-sun"></span>
+      <span class="yurt-moon"></span>
+
+      <!-- Clouds drift across the sky ahead of the ridges, so a low one
+           passes behind the dunes rather than over them. -->
+      <span class="yurt-cloud yurt-cloud-a"></span>
+      <span class="yurt-cloud yurt-cloud-b"></span>
+      <span class="yurt-cloud yurt-cloud-c"></span>
+      <span class="yurt-cloud yurt-cloud-d"></span>
+      <span class="yurt-cloud yurt-cloud-e"></span>
+      <span class="yurt-cloud yurt-cloud-f"></span>
+      <!-- The range on the skyline, behind the ridges: two lines of peaks
+           whose feet sit low enough to be buried by the nearest grass, so
+           they read as standing beyond it rather than on it. Snow only on
+           the three tallest of the far line — capping every peak makes a
+           range look like a row of tents. Their fills come from the
+           time-of-day palettes (see script.js), which is what lets them
+           go from hazy blue at midday to lit rock at sunset to flat
+           silhouette at night. -->
+      <svg class="yurt-mountains" viewBox="0 0 1440 320" preserveAspectRatio="none" aria-hidden="true">
+        <!-- Peak shapes and snowlines are generated rather than typed —
+             regenerate them with generate-mountains.js. Two
+             things made that worth doing. Snow placed by hand ended up
+             outside the rock: the ragged snowline had vertices sitting
+             above the slope they were meant to lie on, so a white shard
+             stuck out into the sky. Generated, every snowline vertex
+             starts ON a slope and is pushed down from it, so it cannot
+             leave the silhouette; that script asserts it and refuses to
+             print a set that breaks the rule.
+             And the profiles stopped repeating: shoulders sit on
+             different sides at different heights, two peaks carry a
+             second summit, one is worn flat, and the snowline is set by a
+             drop in height rather than a fraction of each slope — a
+             fraction put it halfway down one side and just under the
+             summit on the other, where a real snowline is level.
+
+             Each range is a row of overlapping peaks, drawn as subpaths of
+             one path so the overlaps union into a single silhouette
+             instead of stacking up seams. Peaks are laid out far steeper
+             than they render: the band is roughly 1400x210 on screen
+             against a 1440x320 viewBox, and preserveAspectRatio="none"
+             squashes the vertical to about 0.65, so a slope has to be
+             drawn at ~1.5x its intended pitch to come out looking like
+             one. -->
+        <path class="yurt-mtn is-far yurt-mtn-far" d="M-170 320 L-60 236 L60 150 L240 320 Z M175 320 L330 104 L374 162 L402 136 L530 320 Z M465 320 L585 200 L700 76 L806 208 L940 320 Z M865 320 L955 190 L1010 158 L1080 214 L1190 320 Z M1115 320 L1235 214 L1330 118 L1570 320 Z" />
+        <!-- The shadowed half of each: summit, down the far side, back up
+             the spur. The sun sits on the left of this scene, so the light
+             falls that way and these fall away from it. -->
+        <path class="yurt-mtn is-far yurt-mtn-far-shade" d="M60 150 L240 320 L60 320 Z M330 104 L374 162 L402 136 L530 320 L330 320 Z M700 76 L806 208 L940 320 L700 320 Z M1010 158 L1080 214 L1190 320 L1010 320 Z M1330 118 L1570 320 L1330 320 Z" />
+        <!-- Snow on the three highest summits only — cap every peak and a
+             range turns into a row of tents. -->
+        <path class="yurt-mtn is-far yurt-mtn-snow" d="M330 104 L370 157 L362 172 L354 143 L346 151 L338 122 L321 142 L312 138 L303 167 L294 163 L286 167 Z M700 76 L750 139 L740 152 L730 121 L720 127 L710 96 L689 114 L677 110 L666 139 L654 135 L643 139 Z M1330 118 L1404 181 L1389 194 L1374 163 L1359 169 L1345 138 L1318 156 L1305 152 L1293 181 L1281 177 L1269 181 Z" />
+        <path class="yurt-mtn is-far yurt-mtn-snow-shade" d="M330 104 L370 156 L362 172 L354 143 L346 151 L338 122 L330 122 Z M700 76 L750 138 L740 152 L730 121 L720 127 L710 96 L700 94 Z M1330 118 L1404 180 L1389 194 L1374 163 L1359 169 L1345 138 L1330 136 Z" />
+        <!-- Foothills in front: lower, darker and bare. No snow down here,
+             which is half of what sets the two ranges apart. -->
+        <path class="yurt-mtn is-near yurt-mtn-near" d="M-170 320 L190 234 L300 280 L400 320 Z M330 320 L520 206 L625 270 L730 320 Z M640 320 L860 250 L950 286 L1050 320 Z M960 320 L1085 256 L1180 196 L1330 320 Z M1265 320 L1440 220 L1530 272 L1640 320 Z" />
+        <path class="yurt-mtn is-near yurt-mtn-near-shade" d="M190 234 L300 280 L400 320 L190 320 Z M520 206 L625 270 L730 320 L520 320 Z M860 250 L950 286 L1050 320 L860 320 Z M1180 196 L1330 320 L1180 320 Z M1440 220 L1530 272 L1640 320 L1440 320 Z" />
+      </svg>
+
+      <!-- Five ridges instead of a single horizon line. script.js moves
+           each one as the section is scrolled — further layers slower,
+           plus a vertical sine with a different phase per layer, which
+           is what makes them roll like swell rather than slide as one
+           sheet. Every path runs from -120 to 1560 and is filled down to
+           420 (past the 320-tall viewBox) so neither the sideways travel
+           nor the rise and fall can ever pull a gap in at an edge. -->
+      <svg class="yurt-horizon" viewBox="0 0 1440 320" preserveAspectRatio="none">
+        <path class="yurt-hill yurt-hill-1" d="M-120 138 C140 104 320 152 520 132 C700 114 820 88 1010 116 C1200 144 1360 118 1560 136 L1560 420 L-120 420 Z" />
+        <path class="yurt-hill yurt-hill-2" d="M-120 176 C120 146 300 196 500 174 C690 152 840 128 1030 158 C1220 188 1380 160 1560 180 L1560 420 L-120 420 Z" />
+        <path class="yurt-hill yurt-hill-3" d="M-120 210 C160 184 340 232 540 210 C740 188 880 166 1080 196 C1260 222 1400 198 1560 214 L1560 420 L-120 420 Z" />
+        <path class="yurt-hill yurt-hill-4" d="M-120 246 C180 218 380 268 580 246 C780 224 920 204 1120 232 C1300 258 1420 234 1560 250 L1560 420 L-120 420 Z" />
+        <path class="yurt-hill yurt-hill-5" d="M-120 282 C200 256 420 302 620 282 C820 262 960 244 1160 270 C1330 292 1440 272 1560 286 L1560 420 L-120 420 Z" />
+      </svg>
+    </div>
+
+    <div class="yurt-layout">
+
+      <!-- Left: the yurt. Everything inside #yurtBody is a hand-written
+           still yurt facing the viewer (rotation 0°) so a no-JS visitor
+           gets a finished drawing; script.js discards it on init and
+           rebuilds the same yurt procedurally, which is what lets it be
+           re-projected at any angle. The geometry constants (radius 175,
+           wall top y=210, crown y=104 …) are duplicated in script.js —
+           keep the two in sync if either is ever retuned. -->
+      <figure class="yurt-figure">
+        <!-- Sun wheel behind the yurt, echoing the shanyrak on its
+             crown: the sky above the yurt was a bare gradient. It lives
+             INSIDE the figure rather than in the backdrop so its centre
+             and its size come from the yurt itself — anchored to
+             percentages of the whole backdrop it drifted off the yurt,
+             overflowed the viewport and ran under the nav. The rings are
+             stroked circles whose dash patterns do the repeating, and
+             the rosette is 18 copies of one ornament. Rotation is driven
+             by scroll (see --halo-turn in script.js), the opposite way
+             to the yurt, so the two turn against each other rather than
+             looking welded together. -->
+        <div class="yurt-halo-mask">
+        <svg class="yurt-halo" viewBox="-100 -100 200 200" aria-hidden="true">
+            <circle class="halo-line" r="99" stroke-dasharray="1.6 7" />
+          <circle class="halo-line" r="95" />
+          <!-- Sixteen ornaments round the ring. Each is rotated into place
+               and then pushed out along its own axis, so every one stands
+               on the radius rather than all pointing north. -->
+          <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(0) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(15) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(30) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(45) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(60) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(75) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(90) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(105) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(120) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(135) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(150) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(165) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(180) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(195) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(210) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(225) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(240) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(255) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(270) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(285) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(300) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(315) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(330) translate(0 -80)" />
+        <image class="halo-motif" href="assets/ornament-halo.png" x="-4.87" y="-13.0" width="9.74" height="26.0" transform="rotate(345) translate(0 -80)" />
+        <circle class="halo-line" r="47" />
+          <circle class="halo-dot" r="38" stroke-dasharray="0.1 14.82" />
+        </svg>
+        </div>
+
+        <svg class="yurt-svg" id="yurtSvg" viewBox="0 0 520 410" preserveAspectRatio="xMidYMid meet"
+             role="img" aria-labelledby="yurtSvgTitle">
+          <title id="yurtSvgTitle">Казахская юрта — поворачивается по мере прокрутки страницы</title>
+          <defs>
+            <!-- Cylinder shading: light down the middle, falling off to
+                 both silhouette edges, so the wall reads as round. -->
+            <linearGradient id="yurtWallGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#cdb897" />
+              <stop offset="0.18" stop-color="#eee2cf" />
+              <stop offset="0.42" stop-color="#fbf6ee" />
+              <stop offset="0.72" stop-color="#efe3d0" />
+              <stop offset="1" stop-color="#c9b391" />
+            </linearGradient>
+            <linearGradient id="yurtDomeGrad" x1="0.1" y1="0" x2="0.95" y2="0.9">
+              <stop offset="0" stop-color="#fdfaf4" />
+              <stop offset="0.45" stop-color="#f4ead9" />
+              <stop offset="1" stop-color="#d9c7a7" />
+            </linearGradient>
+            <radialGradient id="yurtShadowGrad" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0" stop-color="rgba(60,40,30,0.28)" />
+              <stop offset="0.6" stop-color="rgba(60,40,30,0.11)" />
+              <stop offset="1" stop-color="rgba(60,40,30,0)" />
+            </radialGradient>
+          </defs>
+
+          <g id="yurtBody">
+            <ellipse cx="260" cy="346" rx="205" ry="34" fill="url(#yurtShadowGrad)" />
+            <!-- Wall (kerege): front half of the top ellipse, down the
+                 sides, back along the front half of the base ellipse. -->
+            <path d="M85 210 A175 52.5 0 0 0 435 210 L435 336 A175 52.5 0 0 1 85 336 Z" fill="url(#yurtWallGrad)" />
+            <clipPath id="yurtWallClip">
+              <path d="M85 210 A175 52.5 0 0 0 435 210 L435 336 A175 52.5 0 0 1 85 336 Z" />
+            </clipPath>
+            <path class="yurt-band" d="M85 222 A175 52.5 0 0 0 435 222 L435 246 A175 52.5 0 0 1 85 246 Z" />
+            <g clip-path="url(#yurtWallClip)">
+            <!-- Belt ornaments. The matrix both squashes each one by
+                 cos(angle) and tilts it along the belt's own slope, so
+                 towards the silhouette they lie in the band instead of
+                 poking out above and below it. The artwork itself, with
+                 its background keyed out (see assets/ornament-gold-alpha.png
+                 — the original PNG's white is fully opaque and shows as a
+                 box on the maroon belt). Foreshortened by the same
+                 cos(angle) squash the rest of the wall gets; script.js
+                 replaces these with twenty going all the way round. -->
+            <image class="yurt-motif" href="assets/ornament-gold-alpha.png" preserveAspectRatio="none" x="-27.5" y="-11" width="55" height="22" transform="matrix(1 0 0 1 260 286.5)" />
+            <image class="yurt-motif" href="assets/ornament-gold-alpha.png" preserveAspectRatio="none" x="-27.5" y="-11" width="55" height="22" transform="matrix(0.809 -0.1763 0 1 362.86 276.47)" />
+            <image class="yurt-motif" href="assets/ornament-gold-alpha.png" preserveAspectRatio="none" x="-27.5" y="-11" width="55" height="22" transform="matrix(0.809 0.1763 0 1 157.14 276.47)" />
+            <image class="yurt-motif" opacity="0.4" href="assets/ornament-gold-alpha.png" preserveAspectRatio="none" x="-27.5" y="-11" width="55" height="22" transform="matrix(0.309 -0.2853 0 1 426.43 250.22)" />
+            <image class="yurt-motif" opacity="0.4" href="assets/ornament-gold-alpha.png" preserveAspectRatio="none" x="-27.5" y="-11" width="55" height="22" transform="matrix(0.309 0.2853 0 1 93.57 250.22)" />
+            </g>
+            <path class="yurt-door" d="M208.3 386.2L221.0 387.2L233.8 387.9L246.9 388.4L260.0 388.5L273.1 388.4L286.2 387.9L299.0 387.2L311.7 386.2L311.7 314.2L299.0 315.2L286.2 315.9L273.1 316.4L260.0 316.5L246.9 316.4L233.8 315.9L221.0 315.2L208.3 314.2Z" />
+            <path class="yurt-door-split" d="M260 388.5 L260 316.5" />
+            <!-- The felt curtain, rolled and tied above the doorway. -->
+            <path class="yurt-roll" d="M200.8 313.4L215.2 314.8L230.0 315.7L244.9 316.3L260.0 316.5L275.1 316.3L290.0 315.7L304.8 314.8L319.2 313.4L319.2 297.4L304.8 298.8L290.0 299.7L275.1 300.3L260.0 300.5L244.9 300.3L230.0 299.7L215.2 298.8L200.8 297.4Z" />
+            <path class="yurt-roll-crease" opacity="0.75" d="M208.8 304.0L221.4 305.0L234.1 305.7L247.0 306.1L260.0 306.3L273.0 306.1L285.9 305.7L298.6 305.0L311.2 304.0" />
+            <path class="yurt-base" d="M85 336 A175 52.5 0 0 0 435 336" />
+            <!-- Dome (uyk felt): profile up the left side, over the crown
+                 ring, back down the right, closed along the eave. -->
+            <path d="M78 210 L88 189.3 L101.7 169.4 L117.3 151.1 L134.3 135 L152.5 121.9 L171.5 112.1 L191.4 106 L212 104 A48 14.4 0 0 1 308 104 L328.6 106 L348.5 112.1 L367.5 121.9 L385.7 135 L402.7 151.1 L418.3 169.4 L432 189.3 L442 210 A182 54.6 0 0 1 78 210 Z" fill="url(#yurtDomeGrad)" />
+            <path class="yurt-eave" d="M78 210 A182 54.6 0 0 0 442 210" />
+            <!-- Roof poles (uyk) at ±0°, ±25°, ±50° and, fainter as they
+                 near the silhouette, ±75°. script.js draws 26 of these
+                 and re-projects them every frame; these nine are just the
+                 ones that face the viewer head-on. -->
+            <path class="yurt-rib" opacity="0.5" d="M260 264.6L260 240.9L260 216.9L260 193.9L260 172.7L260 154.2L260 138.7L260 126.6L260 118.4 M336.9 259.5L332.7 236.1L326.9 212.4L320.3 189.9L313.1 169.2L305.4 151.1L297.4 136.2L289 124.7L280.3 117.1 M183.1 259.5L187.3 236.1L193.1 212.4L199.7 189.9L206.9 169.2L214.6 151.1L222.6 136.2L231 124.7L239.7 117.1 M399.4 245.1L391.8 222.5L381.3 199.9L369.3 178.6L356.3 159.2L342.3 142.6L327.8 129.2L312.5 119.2L296.8 113.3 M120.6 245.1L128.2 222.5L138.7 199.9L150.7 178.6L163.7 159.2L177.7 142.6L192.2 129.2L207.5 119.2L223.2 113.3" />
+            <path class="yurt-rib" opacity="0.32" d="M435.8 224.1L426.1 202.7L412.9 181.7L397.8 162.2L381.4 144.8L363.8 130.2L345.5 119L326.3 111.3L306.4 107.7 M84.2 224.1L93.9 202.7L107.1 181.7L122.2 162.2L138.6 144.8L156.2 130.2L174.5 119L193.7 111.3L213.6 107.7" />
+            <!-- Crown (shanyrak) -->
+            <ellipse class="yurt-crown-fill" cx="260" cy="104" rx="48" ry="14.4" />
+            <!-- Kuldreuish: two sets of parallel bars crossing, each
+                 one arched up out of the ring's plane — the crown is a
+                 shallow dome of bent rods, not a flat grate. -->
+            <path class="yurt-crown-bar" d="M222.3 95.1Q260.0 78.5 297.7 95.1M230.2 92.7Q230.2 87.4 230.2 115.3M212.0 104.0Q260.0 82.9 308.0 104.0M260.0 89.6Q260.0 82.9 260.0 118.4M222.3 112.9Q260.0 96.4 297.7 112.9M289.8 92.7Q289.8 87.4 289.8 115.3" />
+            <ellipse class="yurt-crown-rim" cx="260" cy="104" rx="48" ry="14.4" />
+            <ellipse class="yurt-crown-rim-inner" cx="260" cy="104" rx="43.5" ry="13.1" />
+          </g>
+        </svg>
+      </figure>
+
+      <!-- Right: the facts. -->
+      <div class="yurt-panel">
+        <span class="yurt-eyebrow">Знаешь ли ты</span>
+        <h2 class="yurt-title">Казахстан в шести фактах</h2>
+
+        <ol class="yurt-facts" id="yurtFacts">
+          <li class="yurt-fact is-active">
+            <span class="yurt-fact-num">01</span>
+            <h3 class="yurt-fact-title">№9 в мире</h3>
+            <p class="yurt-fact-stat">2 724 900 км²</p>
+            <p class="yurt-fact-text">Казахстан — 9-я по площади страна мира: больше всей Западной Европы, но живёт здесь всего около 20 миллионов человек.</p>
+          </li>
+          <li class="yurt-fact">
+            <span class="yurt-fact-num">02</span>
+            <h3 class="yurt-fact-title">Без выхода к океану</h3>
+            <p class="yurt-fact-stat">0 км океанского берега</p>
+            <p class="yurt-fact-text">Крупнейшая в мире страна, не имеющая выхода к открытому океану — зато с Каспием, Аралом и тысячами степных озёр.</p>
+          </li>
+          <li class="yurt-fact">
+            <span class="yurt-fact-num">03</span>
+            <h3 class="yurt-fact-title">Байконур</h3>
+            <p class="yurt-fact-stat">работает с 1955 года</p>
+            <p class="yurt-fact-text">Старейший и крупнейший космодром планеты. Именно отсюда в 1961-м стартовал Гагарин — первый человек в космосе.</p>
+          </li>
+          <li class="yurt-fact">
+            <span class="yurt-fact-num">04</span>
+            <h3 class="yurt-fact-title">Озеро Балхаш</h3>
+            <p class="yurt-fact-stat">605 км в длину</p>
+            <p class="yurt-fact-text">Уникальное озеро: западная половина — пресная, восточная — солёная, и это одна и та же вода в одном водоёме.</p>
+          </li>
+          <li class="yurt-fact">
+            <span class="yurt-fact-num">05</span>
+            <h3 class="yurt-fact-title">Резкий климат</h3>
+            <p class="yurt-fact-stat">от −45 до +45 °C</p>
+            <p class="yurt-fact-text">Континентальный климат: перепад температур в течение года доходит до 90 градусов — от морозной зимы до раскалённого лета.</p>
+          </li>
+          <li class="yurt-fact">
+            <span class="yurt-fact-num">06</span>
+            <h3 class="yurt-fact-title">100+ народов</h3>
+            <p class="yurt-fact-stat">более 100 национальностей</p>
+            <p class="yurt-fact-text">Одна из самых многонациональных стран мира: казахи, русские, узбеки, уйгуры, немцы, корейцы, татары — и десятки других.</p>
+          </li>
+        </ol>
+
+        <!-- Duplicates the list's own numbering visually, so it's hidden
+             from screen readers — they already read all six items. -->
+        <div class="yurt-progress" aria-hidden="true">
+          <span class="yurt-rail" id="yurtRail"><i class="is-done"></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="yurt-count" id="yurtCount">01 / 06</span>
+        </div>
+
+        <p class="yurt-hint" id="yurtHint">Крути вниз — юрта повернётся ↓</p>
+      </div>
+
+    </div>
+  </div>
+</section>
 
 <!-- ============ About the project (collapsed by default, expands
      downward with an animation when "О проекте" is clicked) ============ -->
@@ -164,7 +485,12 @@
          destination badges shuffle in place on a timer, instead of a
          card marquee sliding sideways. The quote box tracks whichever
          winner currently sits in the big center slot. -->
+    <!-- The five slots are laid out at fixed pixel offsets inside a
+         746x440 box; .ws-inner is what script.js scales so that box fits
+         whatever width the panel actually has. Without it the right-hand
+         card is simply cut off on anything narrower than ~1456. -->
     <div class="winners-stage" id="winnersStage" aria-hidden="true">
+     <div class="ws-inner">
       <div class="ws-slot ws-xs-l"><div class="ws-card"><div class="ws-photo"><img alt="" /></div><span class="ws-badge"></span></div></div>
       <div class="ws-slot ws-s-l"><div class="ws-card"><div class="ws-photo"><img alt="" /></div><span class="ws-badge"></span></div></div>
       <div class="ws-slot ws-l-c"><div class="ws-card"><div class="ws-photo"><img alt="" /></div><span class="ws-badge"></span></div></div>
@@ -176,6 +502,7 @@
         <div class="ws-quote-name"></div>
         <div class="ws-quote-meta"></div>
       </div>
+     </div>
     </div>
   </div>
 </section>
@@ -197,11 +524,15 @@
     <form class="auth-form" id="loginForm">
       <div class="auth-field">
         <label for="loginEmail">Email</label>
-        <input type="email" id="loginEmail" placeholder="you@nis.kz" required />
+        <!-- Explicit name+autocomplete so the browser's autofill can't
+             confuse this with the register form's name field below (both
+             forms live in the same modal/DOM — without these, Chrome had
+             been offering "Имя и фамилия" values here). -->
+        <input type="email" id="loginEmail" name="email" autocomplete="email" placeholder="you@nis.kz" required />
       </div>
       <div class="auth-field">
         <label for="loginPassword">Пароль</label>
-        <input type="password" id="loginPassword" placeholder="••••••••" required />
+        <input type="password" id="loginPassword" name="password" autocomplete="current-password" placeholder="••••••••" required />
       </div>
       <div class="auth-error" id="loginError"></div>
       <button type="submit" class="auth-submit" id="loginBtn">Войти</button>
@@ -212,15 +543,15 @@
       <div class="auth-fields-grid">
         <div class="auth-field">
           <label for="regName">Имя и фамилия</label>
-          <input type="text" id="regName" placeholder="Айгерим Қайратова" required />
+          <input type="text" id="regName" name="fullName" autocomplete="name" placeholder="Айгерим Қайратова" required />
         </div>
         <div class="auth-field">
           <label for="regEmail">Email</label>
-          <input type="email" id="regEmail" placeholder="you@nis.kz" required />
+          <input type="email" id="regEmail" name="email" autocomplete="email" placeholder="you@nis.kz" required />
         </div>
         <div class="auth-field">
           <label for="regPassword">Пароль</label>
-          <input type="password" id="regPassword" placeholder="••••••••" required minlength="6" />
+          <input type="password" id="regPassword" name="password" autocomplete="new-password" placeholder="••••••••" required minlength="6" />
         </div>
         <div class="auth-field autocomplete-wrap">
           <label for="regRegion">Область</label>
@@ -255,15 +586,34 @@
         <input type="text" id="artTitle" placeholder="Как тают ледники Тянь-Шаня..." required />
       </div>
       <div class="auth-field">
-        <label for="artCategory">Категория</label>
-        <select id="artCategory" required>
-          <option value="">— Выберите категорию —</option>
-          <option value="Наука">Наука</option>
-          <option value="Технологии">Технологии</option>
-          <option value="Экология">Экология</option>
-          <option value="История">История</option>
-          <option value="Эссе">Эссе</option>
-          <option value="Психология">Психология</option>
+        <label for="artRegion">Область</label>
+        <!-- Fixed list (not free-text like registration's regRegion) so the
+             value always exact-matches a data-name on the map's regions —
+             clicking a region in map.html filters the catalog by this exact
+             string. Same 20 names as assets/kazakhstan-map.svg. -->
+        <select id="artRegion" required>
+          <option value="">— Выберите область —</option>
+          <option value="г. Астана">г. Астана</option>
+          <option value="г. Алматы">г. Алматы</option>
+          <option value="г. Шымкент">г. Шымкент</option>
+          <option value="Абайская область">Абайская область</option>
+          <option value="Акмолинская область">Акмолинская область</option>
+          <option value="Актюбинская область">Актюбинская область</option>
+          <option value="Алматинская область">Алматинская область</option>
+          <option value="Атырауская область">Атырауская область</option>
+          <option value="Восточно-Казахстанская область">Восточно-Казахстанская область</option>
+          <option value="Жамбылская область">Жамбылская область</option>
+          <option value="Жетысуская область">Жетысуская область</option>
+          <option value="Западно-Казахстанская область">Западно-Казахстанская область</option>
+          <option value="Карагандинская область">Карагандинская область</option>
+          <option value="Костанайская область">Костанайская область</option>
+          <option value="Кызылординская область">Кызылординская область</option>
+          <option value="Мангистауская область">Мангистауская область</option>
+          <option value="Павлодарская область">Павлодарская область</option>
+          <option value="Северо-Казахстанская область">Северо-Казахстанская область</option>
+          <option value="Туркестанская область">Туркестанская область</option>
+          <option value="Улытауская область">Улытауская область</option>
+          <option value="Байконур">Байконур</option>
         </select>
       </div>
       <div class="auth-field">
@@ -300,10 +650,10 @@
 
 <!-- ============ Top-10 Modal ============ -->
 <div class="auth-overlay" id="top10Overlay" aria-hidden="true">
-  <div class="auth-modal" role="dialog" aria-modal="true" aria-label="Топ-10 недели">
+  <div class="auth-modal" role="dialog" aria-modal="true" aria-label="Топ-3 месяца">
     <button class="auth-close" id="top10Close" aria-label="Закрыть">&times;</button>
-    <h2 class="modal-title">🏆 Топ‑10 недели</h2>
-    <p style="color:rgba(255,255,255,0.5);font-size:.85rem;margin-bottom:1.2rem">Пользователи с наибольшим приростом баллов за 7 дней</p>
+    <h2 class="modal-title">🏆 Топ‑3 месяца</h2>
+    <p style="color:rgba(255,255,255,0.5);font-size:.85rem;margin-bottom:1.2rem">Пользователи с наибольшим приростом баллов за 30 дней</p>
     <div id="top10List" class="top10-list">
       <div class="top10-loading">Загружаем рейтинг...</div>
     </div>
@@ -357,7 +707,36 @@
 
       <div class="profile-field">
         <label for="profileRegion">Область</label>
-        <input type="text" id="profileRegion" placeholder="Алматинская область" />
+        <!-- Fixed list, same as artRegion in the publish form (see its
+             comment) — a value from before this was a strict select
+             (typed free-text at registration, possibly with a typo)
+             gets preserved as a one-off injected option by
+             setSelectValuePreservingUnknown in script.js rather than
+             silently discarded. -->
+        <select id="profileRegion" required>
+          <option value="">— Выберите область —</option>
+          <option value="г. Астана">г. Астана</option>
+          <option value="г. Алматы">г. Алматы</option>
+          <option value="г. Шымкент">г. Шымкент</option>
+          <option value="Абайская область">Абайская область</option>
+          <option value="Акмолинская область">Акмолинская область</option>
+          <option value="Актюбинская область">Актюбинская область</option>
+          <option value="Алматинская область">Алматинская область</option>
+          <option value="Атырауская область">Атырауская область</option>
+          <option value="Восточно-Казахстанская область">Восточно-Казахстанская область</option>
+          <option value="Жамбылская область">Жамбылская область</option>
+          <option value="Жетысуская область">Жетысуская область</option>
+          <option value="Западно-Казахстанская область">Западно-Казахстанская область</option>
+          <option value="Карагандинская область">Карагандинская область</option>
+          <option value="Костанайская область">Костанайская область</option>
+          <option value="Кызылординская область">Кызылординская область</option>
+          <option value="Мангистауская область">Мангистауская область</option>
+          <option value="Павлодарская область">Павлодарская область</option>
+          <option value="Северо-Казахстанская область">Северо-Казахстанская область</option>
+          <option value="Туркестанская область">Туркестанская область</option>
+          <option value="Улытауская область">Улытауская область</option>
+          <option value="Байконур">Байконур</option>
+        </select>
       </div>
 
       <div class="profile-save-row">

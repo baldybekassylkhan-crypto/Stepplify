@@ -54,6 +54,13 @@ model Article {
   title        String
   content      String
   category     String
+  // Which of the 17 regions (+ 3 cities) the article is ABOUT — set by
+  // the author at publish time, independent of their own home region
+  // (User.region). Optional in the DB so existing rows created before
+  // this field survive; the controller enforces it as required for new
+  // articles, same way it already does for category. Nullable reads
+  // fall back to the author's own region (see articleController.js).
+  region       String?
   images       String   @default("[]")
   geoLat       Float?
   geoLng       Float?

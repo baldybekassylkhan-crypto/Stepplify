@@ -1,10 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,700&display=swap');
 
 :root {
+  /* How far the yurt panel rides up over the hero. Shared so the hero
+     can grow by exactly the same amount — otherwise the panel's top
+     edge shows at the bottom of the first screen. */
+  --panel-overlap: clamp(26px, 3.2vw, 52px);
   --maroon: #8a1f2b;
   --maroon-dark: #6e1621;
-  --accent: #ff4d3d;
-  --accent-dark: #e0392a;
+  --accent: var(--maroon); /* was #ff4d3d — now the same red as the logo badge */
+  --accent-dark: var(--maroon-dark); /* was #e0392a */
   --text-light: #f4f8fb;
   --nav-bg: rgba(255, 255, 255, 0.14);
   --nav-border: rgba(255, 255, 255, 0.35);
@@ -29,7 +33,13 @@ body {
 .hero {
   position: relative;
   width: 100%;
-  min-height: 100vh;
+  /* Taller than the viewport by exactly the panel's overlap, with that
+     same amount as padding — box-sizing: border-box keeps the content
+     box at a full 100vh, so the headline stays centred on the screen
+     while the panel's edge lands precisely on the viewport's bottom
+     rather than peeking above it. */
+  min-height: calc(100vh + var(--panel-overlap));
+  padding-bottom: var(--panel-overlap);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -60,6 +70,34 @@ body {
   z-index: 1;
   pointer-events: none;
   background: radial-gradient(65% 65% at 50% 38%, rgba(4, 16, 30, 0.38) 0%, rgba(4, 16, 30, 0) 72%);
+}
+
+/* ---------- Scroll-entry reveal ----------
+   script.js adds .reveal-up to the elements that should ease in as they
+   come into view, then .is-revealed once they get there. The pre-state
+   is applied by JS rather than sitting in the stylesheet, so with no JS
+   (or with reduced motion, which script.js checks) everything is simply
+   visible from the start. */
+.reveal-up {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.reveal-up.is-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-up {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .yurt-edge.is-lit::before {
+    animation: none;
+  }
 }
 
 /* ---------- Scroll progress bar (thin, sits above the nav pill) ---------- */
@@ -110,6 +148,106 @@ body {
     0 8px 30px rgba(4, 20, 38, 0.25);
 }
 
+/* ---------- Light variant of the nav pill ----------
+   The glass treatment above is built for the hero video: white text on
+   dark, with shadows to lift it off a busy image. Scrolled onto the
+   cream yurt section that same treatment all but disappears, so once
+   the hero clears the top of the viewport script.js flips the pill to
+   .is-light — light fill, dark text, no text shadows. Only the home
+   page has a .hero; the catalog and map pages are dark the whole way
+   down and keep the glass version. */
+.topbar.is-light {
+  background: rgba(255, 251, 244, 0.86);
+  border-color: rgba(22, 34, 46, 0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 6px 24px rgba(84, 55, 22, 0.13);
+}
+
+.topbar.is-light .brand,
+.topbar.is-light .nav-center a,
+.topbar.is-light .lang-toggle button#langBtn,
+.topbar.is-light .user-nav-name {
+  color: #16222e;
+  text-shadow: none;
+}
+
+.topbar.is-light .brand-name {
+  text-shadow: none;
+}
+
+.topbar.is-light .btn-glass-sm {
+  color: var(--maroon);
+  background: rgba(138, 31, 43, 0.07);
+  border-color: rgba(138, 31, 43, 0.26);
+  text-shadow: none;
+}
+
+.topbar.is-light .btn-glass-sm:hover {
+  background: rgba(138, 31, 43, 0.13);
+}
+
+.topbar.is-light .mobile-menu-btn {
+  background: rgba(22, 34, 46, 0.07);
+}
+
+.topbar.is-light .mobile-menu-btn span {
+  background: #16222e;
+}
+
+.topbar.is-light .user-chip {
+  background: rgba(22, 34, 46, 0.05);
+  border-color: rgba(22, 34, 46, 0.13);
+}
+
+.topbar.is-light .user-chip:hover {
+  background: rgba(22, 34, 46, 0.09);
+  border-color: rgba(22, 34, 46, 0.22);
+}
+
+/* The chip's gold needs to go a good deal darker to clear 4.5:1 on a
+   light fill — the same hue at its dark-background lightness would be
+   barely legible here. */
+.topbar.is-light .user-nav-points {
+  color: #8a6410;
+  text-shadow: none;
+}
+
+.topbar.is-light .logout-link {
+  color: rgba(22, 34, 46, 0.65);
+  text-shadow: none;
+}
+
+.topbar.is-light .logout-link:hover {
+  color: #16222e;
+  background: rgba(22, 34, 46, 0.07);
+}
+
+/* Cross-fade between the two treatments instead of snapping. */
+.topbar,
+.topbar .brand,
+.topbar .nav-center a,
+.topbar .btn-glass-sm,
+.topbar .lang-toggle button#langBtn,
+.topbar .mobile-menu-btn,
+.topbar .user-chip,
+.topbar .user-nav-name,
+.topbar .user-nav-points,
+.topbar .logout-link {
+  transition:
+    background 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    color 0.35s ease,
+    text-shadow 0.35s ease,
+    transform 0.15s ease;
+}
+
+/* Kept separate so the ✕ morph timing survives the rule above. */
+.topbar .mobile-menu-btn span {
+  transition: transform 0.25s ease, opacity 0.2s ease, background-color 0.35s ease;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -134,7 +272,7 @@ body {
 
 .brand:hover .logo-mark {
   transform: scale(1.08) rotate(-4deg);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 0 5px rgba(255, 77, 61, 0.14);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 0 5px rgba(138, 31, 43, 0.14);
 }
 
 .brand .logo-mark img {
@@ -183,6 +321,47 @@ body {
 
 .nav-center a:hover::after {
   right: 0;
+}
+
+/* Hidden on desktop — .nav-center itself is the nav there. Only takes
+   over below the breakpoint where .nav-center gets hidden (see the
+   ≤900px block further down), so it's the one and only way to reach
+   Каталог статей / О проекте / Карта on a phone. */
+.mobile-menu-btn {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  cursor: pointer;
+}
+
+.mobile-menu-btn span {
+  display: block;
+  width: 17px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--text-light);
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+
+/* Morphs into an ✕ while the dropdown is open. */
+.mobile-menu-btn[aria-expanded='true'] span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.mobile-menu-btn[aria-expanded='true'] span:nth-child(2) {
+  opacity: 0;
+}
+
+.mobile-menu-btn[aria-expanded='true'] span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
 }
 
 .nav-right {
@@ -290,20 +469,71 @@ body {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 800;
   font-size: clamp(36px, 5vw, 58px);
+  /* .hero-content centres its items, which sizes this to its content
+     instead of the column — and a nowrap phrase then widened the h1
+     past the column rather than being scaled down to it. Filling the
+     column gives script.js a real width to fit the phrase into. */
+  width: 100%;
   line-height: 1.15;
   letter-spacing: -0.5px;
   margin-bottom: 20px;
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
 }
 
+/* Base state, and the fallback wherever background-clip: text is not
+   supported — without this the @supports block below would leave the
+   word transparent, i.e. invisible. The h1's own shadow is tuned for
+   white text: a dark blur behind a white glyph darkens the sky and makes
+   the letter pop. Behind a dark maroon word it does the opposite, which
+   is what read as the word being muddied, so it gets a fraction of it. */
 .hero-title .accent {
   color: var(--accent);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
 }
 
-/* Rotating second line — cycles through phrases like on grader.cloud */
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .hero-title .accent {
+    /* The same ramp as .btn-primary below, so the accent word and the
+       primary CTA read as one accent colour. */
+    background-image: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    /* drop-shadow, not text-shadow: a text-shadow is painted behind the
+       glyph box and would show straight through letters whose fill is
+       transparent. drop-shadow works off the rendered alpha instead, so
+       the glow follows the actual letterforms. */
+    /* An ordinary drop shadow, matching the fallback above. It has to be
+       a filter rather than a text-shadow: the fill here is transparent,
+       and a text-shadow is painted behind the glyph box, so it would
+       show straight through the letters instead of sitting behind them. */
+    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.18));
+    text-shadow: none;
+  }
+}
+
+/* Rotating third line — cycles through phrases like on grader.cloud.
+   The slot's height is set in the h1's own font-size, which never
+   changes, so a phrase that has to be scaled down to fit still occupies
+   exactly one line of the same height: the headline block keeps its
+   three lines and everything under it stays put through every swap. */
+.hero-title .rotator-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.15em;
+}
+
 .hero-title .rotator {
   display: inline-block;
-  transition: opacity 0.35s ease, transform 0.35s ease, filter 0.35s ease, font-size 0.35s ease;
+  /* Never wrap — script.js scales the phrase down until it fits the
+     line instead, which is what keeps this to three lines. */
+  white-space: nowrap;
+  line-height: 1.15;
+  /* font-size deliberately absent from the transition: the swap happens
+     while the phrase is invisible anyway, and animating it would make
+     script.js measure a width that is still in motion. */
+  transition: opacity 0.35s ease, transform 0.35s ease, filter 0.35s ease;
   will-change: opacity, transform;
 }
 
@@ -319,7 +549,11 @@ body {
   line-height: 1.55;
   color: #ffffff;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
-  max-width: 480px;
+  /* Was capped at 480px, which broke this one sentence across two
+     lines. The headline column above is 720px and the sentence needs
+     ~510px, so letting it use the column keeps it on a single line —
+     and it still wraps by itself on a narrow screen. */
+  max-width: 100%;
   margin-bottom: 32px;
 }
 
@@ -346,7 +580,7 @@ body {
 .btn-primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-dark));
   color: #fff;
-  box-shadow: 0 12px 26px rgba(224, 57, 42, 0.4);
+  box-shadow: 0 12px 26px rgba(110, 22, 33, 0.4);
 }
 
 .btn-primary .arrow {
@@ -355,7 +589,7 @@ body {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 32px rgba(224, 57, 42, 0.48);
+  box-shadow: 0 16px 32px rgba(110, 22, 33, 0.48);
 }
 
 .btn-primary:hover .arrow {
@@ -435,6 +669,1026 @@ body {
   padding-left: 36px;
   padding-bottom: 3px;
   border-left: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+/* ---------- Rotating-yurt facts section ----------
+   CSS defaults to the "no JS" state — section in normal page flow, not
+   pinned, no scroll runway, and all six facts stacked and readable at
+   once next to a still yurt. script.js opts IN to the scroll-scrubbed
+   version by adding .js-yurt-active, and only when the visitor hasn't
+   asked for reduced motion, so anything that fails there degrades to a
+   plain readable section rather than to a blank giant runway. */
+.yurt-section {
+  position: relative;
+  /* Above the hero, which it overlaps by exactly its own corner radius
+     below — the section rides up over the video rather than butting
+     against it. The background video is fixed, so as this scrolls in it
+     already slides over a stationary picture; the rounded edge is what
+     makes that read as a panel arriving instead of a cut. No fade over
+     the photo: a wash to the section's colour smeared the hero's last
+     screen into milk, which is worse than any seam it removed. */
+  z-index: 1;
+  border-radius: var(--panel-overlap);
+  margin-top: calc(-1 * var(--panel-overlap));
+  /* Depth under both edges. Darkens the photo a touch right at each
+     join instead of whitening it out over a few hundred pixels — the
+     bottom used to be a sand haze dissolving into the video, which had
+     the same smeared look as the fade that used to sit on the hero. */
+  box-shadow:
+    0 -14px 32px rgba(10, 26, 48, 0.18),
+    0 14px 32px rgba(10, 26, 48, 0.18);
+  /* Daylight over the steppe, and the no-JS state: the sky that actually
+     animates lives on .yurt-backdrop, where script.js runs it through a
+     full day as the section is scrolled. Everything below reads its
+     colours from --ink/--warm, which script.js interpolates alongside
+     the sky; the literals here are the daylight end of each of those
+     ramps, so with no JS the section simply stays at midday. */
+  background: linear-gradient(180deg, #0c4692 0%, #3a82c8 45%, #86bde4 100%);
+  color: var(--ink, #101822);
+}
+
+/* Closing edge, mirroring the hairline on the leading one. No sweep —
+   the ornament band riding just above it is decoration enough. */
+.yurt-section::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  pointer-events: none;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+  background: rgba(216, 172, 86, 0.35);
+}
+
+/* Hairline along that leading edge, and the one piece of animation the
+   join gets: a warm highlight runs the width of it once, the first time
+   the edge comes into view (script.js adds .is-lit). */
+.yurt-edge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+  background: rgba(216, 172, 86, 0.35);
+}
+
+.yurt-edge::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(216, 172, 86, 0) 0%, rgba(226, 180, 92, 0.95) 50%, rgba(216, 172, 86, 0) 100%);
+  transform: translateX(-100%);
+}
+
+.yurt-edge.is-lit::before {
+  animation: yurt-edge-sweep 1.15s cubic-bezier(0.33, 0, 0.2, 1) 1 both;
+}
+
+@keyframes yurt-edge-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+.yurt-section.js-yurt-active {
+  /* Scroll runway: one viewport to settle into the pin, then a slice per
+     fact. --yurt-steps is set from the fact count by script.js so adding
+     a fact lengthens the runway instead of speeding everything up. */
+  height: calc(100vh + var(--yurt-steps, 6) * 72vh);
+}
+
+.yurt-sticky {
+  /* Top padding clears the fixed .topbar (~78px incl. its own offset). */
+  padding: 96px 24px 40px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.yurt-section.js-yurt-active .yurt-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.yurt-layout {
+  position: relative;
+  z-index: 1; /* above .yurt-backdrop */
+  width: 100%;
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: clamp(20px, 4vw, 60px);
+  align-items: center;
+}
+
+/* ---- Backdrop ----
+   Lives inside the sticky rather than on the section itself, so every
+   piece of it stays put at a fixed spot on screen while the gradient
+   behind it scrolls — the yurt keeps standing on its horizon instead of
+   sliding up off it. */
+.yurt-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Matches the panel's corners: before the pin starts this box's top
+     edge IS the section's top edge, and a cloud drifting through the
+     corner would otherwise paint outside the rounded background. */
+  border-radius: var(--panel-overlap);
+  /* The sky. It sits here rather than on the section itself because the
+     section is several screens tall: a gradient stretched over all of it
+     would only ever show the sliver behind the current screen, so the
+     whole sky could never be night at once. Pinned to the viewport-sized
+     sticky instead, all three stops are on screen together and script.js
+     can walk them from day to night and back (see --sky-* there). */
+  background: linear-gradient(
+    180deg,
+    var(--sky-top, #0c4692) 0%,
+    var(--sky-mid, #3a82c8) 52%,
+    var(--sky-low, #86bde4) 100%
+  );
+}
+
+/* Stars, built by script.js and shown only by the night factor, so they
+   cost nothing on a daylit sky and never appear in the no-JS state. */
+.yurt-stars {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: var(--night, 0);
+}
+
+.yurt-stars circle {
+  fill: #f2f7ff;
+}
+
+/* Only a third of them breathe — enough to read as a live sky without
+   putting sixty continuously repainting nodes behind the facts. */
+.yurt-stars circle.is-twinkling {
+  animation: yurt-star-twinkle var(--tw-dur, 4s) ease-in-out infinite alternate;
+  animation-delay: var(--tw-delay, 0s);
+}
+
+@keyframes yurt-star-twinkle {
+  from { opacity: 0.25; }
+  to { opacity: 1; }
+}
+
+/* Sun and moon hold the same spot in the sky, one handing over to the
+   other as the light goes — so it's one object's worth of geometry with
+   two paints on it. Floored in pixels like the birds: the nav pill is a
+   fixed ~78px tall, so a plain percentage would park them behind the
+   pill on a short screen. */
+.yurt-sun,
+.yurt-moon {
+  position: absolute;
+  left: 13%;
+  top: max(132px, 15%);
+  width: clamp(38px, 4.4vw, 62px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+/* The two never cross-fade through each other. Sharing one spot, a
+   half-lit sun sitting inside a half-lit moon would just read as one
+   muddled disc, so the sun is gone by the time the sky is halfway down
+   and the moon only starts after that: the sun sets, a stretch of empty
+   sky, then the moon is up. Both resolve to their daylight state without
+   JS, where --night is undefined and so counts as 0. */
+.yurt-sun {
+  opacity: clamp(0, calc(1 - var(--night, 0) / 0.45), 1);
+  background: radial-gradient(circle at 42% 38%, #fffdf2 0%, var(--sun, #ffe28c) 60%, var(--sun-edge, #ffc55e) 100%);
+  box-shadow: 0 0 46px 16px rgba(255, 209, 128, 0.35);
+}
+
+.yurt-moon {
+  opacity: clamp(0, calc((var(--night, 0) - 0.5) * 2), 1);
+  background: radial-gradient(circle at 38% 34%, #fdfcf4 0%, #eef0e2 58%, #d8dcc8 100%);
+  box-shadow: 0 0 34px 12px rgba(226, 234, 255, 0.22);
+}
+
+/* Low sun behind the yurt: warm, wide and weak enough that the facts
+   next to it never lose contrast. */
+.yurt-backdrop::before {
+  content: '';
+  position: absolute;
+  left: 27%;
+  top: 48%;
+  width: min(900px, 80vw);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(226, 172, 86, 0.3) 0%, rgba(226, 172, 86, 0.13) 40%, rgba(226, 172, 86, 0) 68%);
+  animation: yurt-sun-breathe 15s ease-in-out infinite alternate;
+  /* Sets with the day — the moon takes over from here. */
+  opacity: calc(1 - var(--night, 0));
+}
+
+/* Sun wheel behind the yurt. Sized and centred off the figure, not off
+   the viewport: 58% down is where the yurt's own middle sits inside its
+   viewBox (crown at y=90, base at y=388 of 410), and a diameter of 126%
+   of the figure's height keeps the ring inside both the column and the
+   pinned viewport at every size — which percentages of the backdrop did
+   not. The rotation comes in as a variable rather than as a transform of
+   its own: the element already needs a translate to centre itself, and
+   script.js would have to know about that to avoid overwriting it. */
+.yurt-halo-mask {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  height: 126%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+  z-index: 0;
+  /* Fades the ring out before its lower arc reaches the horizon hills —
+     without this the stroke and the wave crests cross each other
+     directly, which reads as a rendering glitch rather than the ring
+     standing behind the yurt. This sits on a non-rotating wrapper so
+     the fade band stays put at the bottom of the screen as the ring
+     underneath it turns, rather than sweeping around with it. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 92%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 92%);
+}
+
+.yurt-halo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform: rotate(var(--halo-turn, 0deg));
+}
+
+.yurt-halo circle {
+  fill: none;
+  stroke: #c8963c;
+}
+
+/* Round caps turn each dash into a bead. Worth keeping in mind if a
+   thicker stroke is ever added here: a round cap adds half the stroke
+   width to each end of a dash, so on a heavy stroke a short dash comes
+   out as a fat lozenge rather than a dot. */
+.halo-line,
+.halo-dot {
+  stroke-linecap: round;
+}
+
+.halo-line {
+  stroke-width: 1;
+  opacity: 0.28;
+}
+
+/* The rosette. The motif is a bitmap now, so there is nothing to fill
+   or stroke — only how strongly it prints. Solid silhouettes read much
+   heavier than the stroked shape they replaced, hence the lower value. */
+.halo-motif {
+  opacity: 0.2;
+}
+
+/* A near-zero dash with a round cap draws a dot the width of the
+   stroke; giving the dash real length would stretch each one into a
+   capsule instead. */
+.halo-dot {
+  stroke-width: 4.5;
+  opacity: 0.24;
+}
+
+/* Birds. The span drifts, the path inside beats its wings. */
+.yurt-bird {
+  position: absolute;
+  left: 0;
+  width: 30px;
+  height: 21px;
+  animation: yurt-bird-drift linear infinite;
+}
+
+.yurt-bird svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.yurt-bird path {
+  fill: none;
+  stroke: #46586d;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  /* Gone by nightfall — a dark bird on a dark sky is a smudge, and an
+     empty night sky is the truer picture anyway. */
+  opacity: calc(0.5 * (1 - var(--night, 0)));
+  transform-origin: 50% 60%;
+  animation: yurt-bird-flap ease-in-out infinite alternate;
+}
+
+/* Heights are floored in pixels, not left as plain percentages: the nav
+   pill is a fixed ~78px tall whatever the viewport is, so on a short
+   screen 12-16% of the backdrop puts a bird straight behind it. The
+   max() keeps them proportional on tall screens and out from under the
+   pill on short ones. */
+.yurt-bird-1 {
+  top: max(148px, 16%);
+  animation-duration: 58s;
+  animation-delay: -8s;
+}
+.yurt-bird-1 path { animation-duration: 0.62s; }
+
+.yurt-bird-2 {
+  top: max(186px, 21%);
+  width: 23px;
+  height: 16px;
+  animation-duration: 66s;
+  animation-delay: -16s;
+}
+.yurt-bird-2 path { animation-duration: 0.78s; animation-delay: -0.3s; }
+
+.yurt-bird-3 {
+  top: max(116px, 12%);
+  width: 18px;
+  height: 13px;
+  animation-duration: 78s;
+  animation-delay: -41s;
+}
+.yurt-bird-3 path { animation-duration: 0.9s; animation-delay: -0.55s; }
+
+@keyframes yurt-bird-drift {
+  from { transform: translateX(-12vw); }
+  to { transform: translateX(112vw); }
+}
+
+@keyframes yurt-bird-flap {
+  from { transform: scaleY(1); }
+  to { transform: scaleY(0.45); }
+}
+
+/* Clouds crossing the sky, on long linear drifts staggered with negative
+   delays so they're already spread across the sky on the first frame
+   rather than filing in from the left edge one after another.
+
+   Each is four overlapping lobes rather than the single soft blob this
+   used to be: on the pale sky that blob read as haze, and once the blue
+   went deeper it turned into a smudge with no shape to it. Three round
+   lobes of falling height carry the top, and a wide flat one along the
+   bottom gives the cumulus its base — the flat underside is most of what
+   makes a shape read as a cloud rather than as a cluster of circles. The
+   fade sits in the last fifth of each lobe: enough to keep the edges
+   soft against the flat-vector scene, not so much that the silhouette
+   dissolves again. */
+.yurt-cloud {
+  position: absolute;
+  left: 0;
+  animation: yurt-cloud-drift linear infinite;
+  will-change: transform;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(closest-side, rgba(255, 255, 255, 0.97) 76%, rgba(255, 255, 255, 0) 100%),
+    radial-gradient(closest-side, rgba(255, 255, 255, 0.97) 76%, rgba(255, 255, 255, 0) 100%),
+    radial-gradient(closest-side, rgba(255, 255, 255, 0.95) 74%, rgba(255, 255, 255, 0) 100%),
+    radial-gradient(closest-side, rgba(255, 255, 255, 0.94) 72%, rgba(255, 255, 255, 0) 100%);
+  background-size: 46% 74%, 36% 54%, 30% 44%, 88% 40%;
+  background-position: 34% 26%, 63% 44%, 9% 52%, 50% 78%;
+  /* Keeps drifting after dark, but as grey rather than as white holes
+     punched in the night sky — and takes the sun with it on the way,
+     since underlit cloud is most of what says "evening" in a flat sky. */
+  filter:
+    brightness(calc(1 - 0.74 * var(--night, 0) - 0.08 * var(--evening, 0)))
+    sepia(calc(0.42 * var(--evening, 0)));
+}
+
+.yurt-cloud-a {
+  top: 7%;
+  width: min(300px, 26vw);
+  height: 108px;
+  opacity: 0.95;
+  animation-duration: 84s;
+  animation-delay: -14s;
+}
+
+/* Deliberately at dome height: passing behind the yurt is what makes
+   the drift read as movement at a glance, where a cloud crossing empty
+   sky just looks like a gradient. */
+.yurt-cloud-b {
+  top: 33%;
+  width: min(228px, 20vw);
+  height: 84px;
+  opacity: 0.8;
+  animation-duration: 112s;
+  animation-delay: -62s;
+}
+
+.yurt-cloud-c {
+  top: 2%;
+  width: min(370px, 32vw);
+  height: 126px;
+  opacity: 0.66;
+  animation-duration: 150s;
+  animation-delay: -104s;
+}
+
+/* The far three. Smaller, slower and thinner: with only the near ones
+   the sky emptied out for a minute at a time between passes. */
+.yurt-cloud-d {
+  top: 17%;
+  width: min(196px, 17vw);
+  height: 70px;
+  opacity: 0.72;
+  animation-duration: 128s;
+  animation-delay: -35s;
+}
+
+.yurt-cloud-e {
+  top: 45%;
+  width: min(150px, 13vw);
+  height: 54px;
+  opacity: 0.5;
+  animation-duration: 168s;
+  animation-delay: -132s;
+}
+
+.yurt-cloud-f {
+  top: 25%;
+  width: min(120px, 11vw);
+  height: 44px;
+  opacity: 0.42;
+  animation-duration: 196s;
+  animation-delay: -78s;
+}
+
+/* The skyline range. Sits low enough that its feet finish behind the
+   farthest grass ridge — a distant range meeting the ground in open view
+   reads as a cardboard cutout standing on the field. Fills come from the
+   palettes in script.js, so the whole range turns with the light. */
+.yurt-mountains {
+  position: absolute;
+  left: -2%;
+  right: -2%;
+  width: 104%;
+  bottom: 14%;
+  height: 32%;
+}
+
+.yurt-mtn-far {
+  fill: var(--mtn-far, #9eb8d0);
+}
+
+.yurt-mtn-far-shade {
+  fill: var(--mtn-far-shade, #84a2c0);
+}
+
+.yurt-mtn-near {
+  fill: var(--mtn-near, #6e8fb2);
+}
+
+.yurt-mtn-near-shade {
+  fill: var(--mtn-near-shade, #56769b);
+}
+
+.yurt-mtn-snow {
+  fill: var(--mtn-snow, #f0f7fd);
+}
+
+.yurt-mtn-snow-shade {
+  fill: var(--mtn-snow-shade, #d3e2f1);
+}
+
+.yurt-horizon {
+  position: absolute;
+  left: -2%;
+  right: -2%;
+  bottom: 0;
+  width: 104%;
+  /* Tuned so the far crest lands just under the yurt's base: any higher
+     and the horizon cuts across its wall, which reads as the yurt being
+     half-buried rather than standing on the steppe. */
+  height: 34%;
+  /* Grass keeps its hue after dark, it just stops catching any light.
+     Done as a filter over the whole stack rather than as five more
+     interpolated fills: the ridges only ever move together through the
+     day, so one dimmer is both cheaper and impossible to get out of
+     step with itself. */
+  filter:
+    brightness(calc(1 - 0.6 * var(--night, 0) - 0.24 * var(--evening, 0)))
+    saturate(calc(1 - 0.28 * var(--night, 0)))
+    sepia(calc(0.34 * var(--evening, 0)));
+}
+
+/* Back to front: each ridge a little greener, a little darker and a
+   little more opaque than the one behind it, so the stack reads as
+   distance rather than as five arbitrary bands. The far ones stay
+   washed out on purpose — that haze is what puts them behind the yurt
+   against a blue sky, where five equally solid greens would just look
+   like stacked paper. Their movement is scroll-driven and lives in
+   script.js — no keyframes here, because a CSS animation on `transform`
+   would win over the attribute the script sets and the layers would
+   ignore the scroll entirely. */
+.yurt-hill-1 {
+  fill: #b9d493;
+  opacity: 0.42;
+}
+
+.yurt-hill-2 {
+  fill: #a4c878;
+  opacity: 0.5;
+}
+
+.yurt-hill-3 {
+  fill: #8bba5d;
+  opacity: 0.58;
+}
+
+.yurt-hill-4 {
+  fill: #73a848;
+  opacity: 0.66;
+}
+
+.yurt-hill-5 {
+  fill: #5c9139;
+  opacity: 0.74;
+}
+
+/* Ambient background motion only — slow, low-amplitude and transform /
+   opacity only, so it never competes with the scroll-driven yurt for
+   attention or for frame time. All of it is switched off under
+   prefers-reduced-motion at the bottom of this section. */
+@keyframes yurt-sun-breathe {
+  from {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.82;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1.07);
+    opacity: 1;
+  }
+}
+
+@keyframes yurt-cloud-drift {
+  from { transform: translateX(-70vw); }
+  to { transform: translateX(160vw); }
+}
+
+/* Without the scrub the facts run down the page as one long column, so
+   let the yurt ride along beside them (plain CSS sticky, no JS) instead
+   of floating in the middle of a very tall row. */
+.yurt-section:not(.js-yurt-active) .yurt-layout {
+  align-items: start;
+}
+
+.yurt-section:not(.js-yurt-active) .yurt-figure {
+  position: sticky;
+  top: 104px;
+}
+
+/* ---- Left: the yurt ---- */
+.yurt-figure {
+  position: relative; /* containing block for the halo behind the yurt */
+  margin: 0;
+  min-width: 0;
+}
+
+.yurt-svg {
+  position: relative;
+  z-index: 1; /* over the halo */
+  display: block;
+  width: 100%;
+  /* Capped against the viewport, not just a fixed px height, so the
+     pinned layout still fits on short laptop screens. */
+  height: clamp(260px, 58vh, 470px);
+  overflow: visible;
+}
+
+.yurt-band {
+  fill: rgba(138, 31, 43, 0.9);
+}
+
+/* The belt ornaments are the real koshkar-muyiz artwork now, not
+   diamonds — an <image> per motif, so there is no fill to set. Kept as
+   a hook for the opacity script.js drives per motif. */
+.yurt-motif {
+  pointer-events: none;
+}
+
+.yurt-door {
+  fill: #7a2029;
+  stroke: #d9ac4f;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+/* The felt door-curtain rolled up and tied above the doorway. The same
+   undyed felt as the yurt's own walls — it used to be a lighter tone of
+   the door's maroon, which made it look like a painted board bolted over
+   the frame rather than the cover itself, rolled back. */
+.yurt-roll {
+  fill: #f0e6d3;
+  stroke: #bda484;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+/* The two bands that make it round. Softened at the edges by their own
+   opacity rather than by a gradient, to stay with the flat treatment the
+   rest of the yurt uses. */
+/* Alpha lives in the colour, never in an opacity property: script.js
+   fades every part of the door and its curtain by setting the SVG
+   opacity ATTRIBUTE, and a CSS opacity declaration silently outranks
+   that attribute. These four kept their CSS value through the whole
+   rotation and hung on the wall after the door they belong to had turned
+   away and gone. */
+.yurt-roll-shade {
+  fill: rgba(211, 192, 160, 0.85);
+}
+
+.yurt-roll-hi {
+  fill: rgba(251, 246, 234, 0.75);
+}
+
+/* The seam where the felt finishes wrapping, and the coil at each end. */
+.yurt-roll-crease {
+  fill: none;
+  stroke: #c0a583;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.yurt-roll-curl {
+  fill: none;
+  stroke: #b2947180;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+/* The seam between the two leaves of the door. */
+.yurt-door-split {
+  fill: none;
+  stroke: #d9ac4f;
+  stroke-width: 1.6;
+}
+
+/* Cross-rail and ring pulls. Thinner than the seam so the door still
+   reads as two leaves first and joinery second. */
+.yurt-door-rail {
+  fill: none;
+  stroke: #c39a45;
+  stroke-width: 1.3;
+}
+
+.yurt-door-pull {
+  fill: none;
+  stroke: #e0b559;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+/* The straps holding the curtain up. Maroon, picking up the band and the
+   door either side of it: on felt this pale they are the only thing that
+   reads as a fastening rather than as another crease. */
+.yurt-roll-tie {
+  fill: none;
+  stroke: rgba(138, 31, 43, 0.9);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+}
+
+.yurt-roll-knot {
+  fill: none;
+  stroke: rgba(138, 31, 43, 0.9);
+  stroke-width: 4.4;
+  stroke-linecap: round;
+}
+
+/* Filled rather than stroked: these are ropes bound round the eave and
+   the foot of the wall, and their shape now comes from the fill, which
+   tapers away at both edges (see trimPath). A stroke can't taper, and its
+   cap was what left a red nub hanging off the silhouette. */
+.yurt-base,
+.yurt-eave {
+  fill: rgba(138, 31, 43, 0.6);
+  stroke: none;
+}
+
+/* The lit side of both, along the top. */
+.yurt-trim-crest {
+  fill: none;
+  stroke: rgba(214, 140, 148, 0.75);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+/* Felt seams down the wall and the roof poles (uyk) fanning out of the
+   crown — thin, low-contrast lines whose spacing compresses towards the
+   silhouette. That compression is what actually reads as "turning". */
+.yurt-seam {
+  fill: none;
+  stroke: #b89a70;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.yurt-rib {
+  fill: none;
+  stroke: #b08f63;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.yurt-crown-fill {
+  fill: #efe3cf;
+}
+
+.yurt-crown-rim {
+  fill: none;
+  stroke: #c8963c;
+  stroke-width: 5;
+}
+
+.yurt-crown-bar {
+  fill: none;
+  stroke: #c8963c;
+  /* Thicker now there are only three bars each way — they read as rods,
+     the way they do on the real thing. */
+  stroke-width: 3.2;
+  stroke-linecap: round;
+}
+
+/* A fine line just inside the rim, so the crown reads as a band with
+   some depth rather than one flat hoop. */
+.yurt-crown-rim-inner {
+  fill: none;
+  stroke: #e8c377;
+  stroke-width: 1.2;
+  opacity: 0.9;
+}
+
+/* ---- Right: the facts ---- */
+.yurt-panel {
+  min-width: 0;
+}
+
+/* script.js steps the ink variables from their dusk values to their night
+   ones in a single frame, on purpose — a scroll-driven crossfade can be
+   parked halfway, where the type is grey on a sky of the same weight and
+   reads as nothing at all (see renderSky). This transition is what turns
+   that step into a fade: being driven by time rather than by scroll
+   position, it can be passed through but never stopped in. */
+.yurt-title,
+.yurt-eyebrow,
+.yurt-fact-title,
+.yurt-fact-stat,
+.yurt-fact-text,
+.yurt-count,
+.yurt-hint {
+  transition: color 0.45s ease;
+}
+
+.yurt-eyebrow {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--warm, var(--maroon));
+  margin-bottom: 10px;
+}
+
+.yurt-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: clamp(22px, 2.4vw, 30px);
+  line-height: 1.2;
+  color: var(--ink, #101822);
+  margin-bottom: clamp(18px, 3vh, 32px);
+}
+
+.yurt-facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 30px;
+}
+
+/* Scrubbed mode: all six facts share one grid cell, so the panel is as
+   tall as the tallest fact and never resizes as they swap (no CLS), and
+   the inactive ones stay in the accessibility tree (opacity: 0 does not
+   remove them, unlike display/visibility). */
+.js-yurt-active .yurt-facts {
+  gap: 0;
+}
+
+.js-yurt-active .yurt-fact {
+  grid-area: 1 / 1;
+  opacity: 0;
+  transform: translateY(18px);
+  filter: blur(5px);
+  pointer-events: none;
+  transition: opacity 0.42s ease, transform 0.42s cubic-bezier(0.22, 0.61, 0.36, 1), filter 0.42s ease;
+}
+
+.js-yurt-active .yurt-fact.is-active {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  pointer-events: auto;
+}
+
+.yurt-fact-num {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #c8963c;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 8px;
+}
+
+.yurt-fact-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: clamp(26px, 3.1vw, 40px);
+  line-height: 1.14;
+  color: var(--ink, #101822);
+  margin-bottom: 10px;
+}
+
+.yurt-fact-stat {
+  display: inline-block;
+  font-size: clamp(14px, 1.4vw, 17px);
+  font-weight: 700;
+  color: var(--warm, var(--maroon));
+  font-variant-numeric: tabular-nums;
+  padding-left: 30px;
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.yurt-fact-stat::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 20px;
+  height: 2px;
+  background: #d9ac4f;
+}
+
+.yurt-fact-text {
+  font-size: clamp(14px, 1.15vw, 16px);
+  line-height: 1.65;
+  color: var(--ink-soft, #1a212a);
+  max-width: 46ch;
+}
+
+.yurt-progress {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: clamp(20px, 3.4vh, 36px);
+}
+
+.yurt-rail {
+  display: flex;
+  gap: 6px;
+  flex: 1 1 auto;
+  max-width: 320px;
+}
+
+.yurt-rail i {
+  flex: 1 1 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--rail, rgba(138, 31, 43, 0.15));
+  transition: background 0.4s ease;
+}
+
+.yurt-rail i.is-done {
+  background: var(--warm, var(--maroon));
+}
+
+.yurt-count {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--ink-mute, rgba(22, 34, 46, 0.5));
+  font-variant-numeric: tabular-nums;
+}
+
+.yurt-hint {
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-mute, rgba(22, 34, 46, 0.45));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.js-yurt-active .yurt-hint {
+  opacity: 1;
+}
+
+.js-yurt-active .yurt-hint.is-fading {
+  opacity: 0;
+}
+
+/* Under ~960px the two columns can't both be comfortable side by side —
+   stack them, yurt first, and shorten each fact's slice of the runway so
+   the whole section doesn't turn into an endless scroll on a phone. */
+@media (max-width: 960px) {
+  .yurt-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .yurt-section.js-yurt-active {
+    height: calc(100vh + var(--yurt-steps, 6) * 56vh);
+  }
+  .yurt-sticky {
+    padding: 92px 20px 32px;
+  }
+  /* Stacked layout — a sticky figure would just hang over the facts. */
+  .yurt-section:not(.js-yurt-active) .yurt-figure {
+    position: static;
+  }
+  .yurt-svg {
+    height: clamp(180px, 30vh, 280px);
+  }
+  /* Stacked layout: the facts sit right under the figure, so the ring
+     is pulled in to stay inside it rather than arcing over the eyebrow. */
+  .yurt-halo-mask {
+    height: 112%;
+  }
+  .yurt-backdrop::before {
+    left: 50%;
+    top: 26%;
+  }
+  .yurt-horizon {
+    height: 22%;
+  }
+  /* Follows the shallower grass down, so the range still meets it rather
+     than floating above the skyline. */
+  .yurt-mountains {
+    bottom: 9%;
+    height: 24%;
+  }
+  .yurt-fact-text {
+    max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .yurt-title {
+    margin-bottom: 12px;
+  }
+  .yurt-facts {
+    gap: 24px;
+  }
+  .yurt-fact-title {
+    font-size: 24px;
+  }
+  .yurt-progress {
+    margin-top: 18px;
+  }
+}
+
+/* Reduced motion: never pin, never scrub, never spin — script.js checks
+   this same query before adding .js-yurt-active, and this block keeps
+   the section honest if that check is ever bypassed. */
+@media (prefers-reduced-motion: reduce) {
+  .yurt-section.js-yurt-active {
+    height: auto;
+  }
+  .yurt-section.js-yurt-active .yurt-sticky {
+    position: static;
+    height: auto;
+  }
+  .js-yurt-active .yurt-facts {
+    gap: 30px;
+  }
+  .js-yurt-active .yurt-fact {
+    grid-area: auto;
+    opacity: 1;
+    transform: none;
+    filter: none;
+    pointer-events: auto;
+    transition: none;
+  }
+  .js-yurt-active .yurt-hint {
+    display: none;
+  }
+  .yurt-backdrop::before {
+    animation: none;
+  }
+  .yurt-cloud,
+  .yurt-bird {
+    display: none;
+    animation: none;
+  }
 }
 
 .about-eyebrow {
@@ -525,7 +1779,7 @@ body {
   height: 0%;
   border-radius: 4px;
   background: linear-gradient(180deg, var(--accent), var(--accent-dark));
-  box-shadow: 0 0 14px rgba(255, 77, 61, 0.65);
+  box-shadow: 0 0 14px rgba(138, 31, 43, 0.65);
   transition: height 0.25s linear;
 }
 
@@ -568,7 +1822,7 @@ body {
   background: linear-gradient(135deg, var(--accent), var(--accent-dark));
   border-color: transparent;
   transform: scale(1.14);
-  box-shadow: 0 10px 26px rgba(224, 57, 42, 0.5);
+  box-shadow: 0 10px 26px rgba(110, 22, 33, 0.5);
 }
 
 .arp-card {
@@ -640,6 +1894,148 @@ body {
 
   .about-route-track {
     left: 18px;
+  }
+}
+
+/* ---------- Interactive regions map ---------- */
+/* Full-viewport section, floating dark panel over the fixed .scene
+   video (same "card over the backdrop" trick as .winners-panel).
+   Regions are real oblast borders injected by script.js from
+   assets/kazakhstan-map.svg; hovering one scales + lifts it above its
+   neighbors (see .kz-region below) instead of panning/zooming the
+   whole viewBox — cheaper, and every region gets the same size bump. */
+.map-section {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-wrap {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  min-height: 100svh;
+  background: linear-gradient(155deg, #241016 0%, #1c1420 55%, #14141c 100%);
+  border-radius: 0;
+  box-shadow: none;
+  /* Keep the map clear of the fixed navigation without giving up the
+     full-screen composition. */
+  padding: 112px clamp(18px, 4vw, 64px) clamp(32px, 4vw, 64px);
+  display: flex;
+  /* The SVG keeps its natural proportions, while its panel fills the
+     available viewport behind the fixed navigation. */
+  aspect-ratio: auto;
+  /* Vanishing point for the whole map's tilt below — shared by every
+     child so the tilt and each region's translateZ pop read as one
+     consistent 3D space instead of two flat layers. */
+  perspective: 1300px;
+}
+
+.map-loading {
+  margin: auto;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+}
+
+.kz-map-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform-style: preserve-3d;
+  /* No CSS transition here on purpose — script.js drives the tilt
+     through a requestAnimationFrame loop that eases toward the pointer
+     every frame, which reads far smoother than a CSS transition
+     restarting from scratch on every single mousemove tick. */
+  will-change: transform;
+}
+
+.kz-region {
+  fill: #ffffff;
+  stroke: rgba(60, 40, 28, 0.32);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  transform-box: fill-box;
+  transform-origin: center;
+  /* One soft ambient shadow lifts each region off the dark panel. */
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+  /* Own compositor layer so the hover pop is handled by the GPU instead
+     of being repainted alongside the parent SVG's per-frame tilt
+     rotation (see the rAF loop in script.js) — without this the two
+     animations fight for the same paint pass and the pop can stutter. */
+  will-change: transform, filter;
+  /* ease-in-out, not ease-out — cubic-bezier(0.16,1,.3,1) (ease-out-expo)
+     used to front-load nearly all of the growth into the first fifth of
+     the transition, so it read as an instant jump to full size with a
+     long, barely-visible settle after. This ramps up gradually instead.
+     transform/fill/filter all share the exact same duration + curve now
+     (they used to drift — 0.65s/0.4s/0.5s — so hover-in and hover-out
+     never finished together) so hover on and hover off play back as one
+     motion instead of three properties settling at different times. */
+  transition: transform 0.5s cubic-bezier(0.45, 0, 0.15, 1),
+              fill 0.5s cubic-bezier(0.45, 0, 0.15, 1),
+              filter 0.5s cubic-bezier(0.45, 0, 0.15, 1);
+}
+
+/* Driven only by .is-active (set in script.js's setActiveRegion), not
+   also :hover — setActiveRegion is what moves this region to the end of
+   its parent so it actually paints above its neighbors (see the long
+   comment there; plain z-index doesn't do this for SVG paint order).
+   Letting native :hover trigger this rule too would pop a region without
+   that reorder ever happening, reintroducing the clipping it fixes. */
+.kz-region.is-active {
+  fill: var(--accent);
+  /* translateZ lifts the region out of the tilted map plane (real
+     depth, shared perspective from .map-wrap) instead of just scaling
+     it flat — combined with the tilt this is what gives the "popping
+     off the map" read rather than a plain 2D zoom. */
+  transform: scale(1.35) translateZ(70px);
+  filter: drop-shadow(0 22px 34px rgba(138, 31, 43, 0.6)) brightness(1.06);
+}
+
+.map-tooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  background: rgba(10, 8, 12, 0.94);
+  color: var(--text-light);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: translate(-50%, -130%) scale(0.92);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  z-index: 50;
+}
+
+.map-tooltip-hint {
+  display: block;
+  margin-top: 2px;
+  font-weight: 500;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.map-tooltip.visible {
+  opacity: 1;
+  transform: translate(-50%, -130%) scale(1);
+}
+
+@media (max-width: 720px) {
+  .map-section {
+    min-height: 100svh;
+  }
+
+  .map-wrap {
+    padding: 18px;
   }
 }
 
@@ -818,11 +2214,20 @@ body {
    block below and JS (script.js) only ever swaps img/text content. */
 .winners {
   position: relative;
-  padding: 64px 5vw 96px;
+  /* Last section on the page. Filling the viewport and centring the
+     panel makes the final screen BE the panel, instead of leaving it
+     high with a screenful of video to keep scrolling through under it.
+     Top padding stays clear of the fixed nav pill; the section still
+     grows past 100vh on a short screen rather than clipping the panel. */
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: clamp(92px, 11vh, 116px) 5vw clamp(28px, 4vh, 60px);
 }
 
 .winners-panel {
   position: relative;
+  width: 100%;
   max-width: 1280px;
   margin: 0 auto;
   display: flex;
@@ -967,7 +2372,23 @@ body {
   z-index: 1;
   flex: 1;
   min-width: 0;
+  /* Overwritten by script.js to the scaled height of .ws-inner; this is
+     the unscaled default for a viewport wide enough to need no scaling
+     (and for no-JS). */
   height: 440px;
+}
+
+/* The fixed-pixel composition the slots are positioned in. Anchored to
+   the top centre so scaling it down keeps the arrangement centred in the
+   column and its top edge where it was. */
+.ws-inner {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 746px;
+  height: 440px;
+  margin-left: -373px;
+  transform-origin: top center;
 }
 
 .ws-slot {
@@ -1072,6 +2493,28 @@ body {
   color: rgba(22, 34, 46, 0.55);
 }
 
+/* Short viewports: the panel's height is set by its text column (461px
+   of it at full size), which together with the padding put the whole
+   block past the bottom of a laptop screen and tucked its heading under
+   the nav pill. Tightening the type and the padding — not the artwork —
+   is what buys the room back. */
+@media (max-height: 820px) {
+  .winners-panel {
+    padding: clamp(28px, 5vh, 40px) 44px;
+    gap: 30px;
+  }
+  .winners-title {
+    font-size: clamp(24px, 2.6vw, 32px);
+    margin-bottom: 12px;
+  }
+  .winners-sub {
+    margin-bottom: 18px;
+  }
+  .winners-pill-wrap {
+    margin-top: 18px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .winners-pill-track {
     animation: none;
@@ -1080,8 +2523,46 @@ body {
 
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  /* Was just `display: none` (links unreachable on mobile at all) —
+     now a dropdown panel toggled by .mobile-menu-btn instead, anchored
+     to .topbar (position: fixed, so it's the nearest positioned
+     ancestor) so it hangs directly below the glass pill. */
   .nav-center {
     display: none;
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding: 10px 18px;
+    border-radius: 20px;
+    background: var(--nav-bg);
+    border: 1px solid var(--nav-border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  }
+
+  .nav-center.open {
+    display: flex;
+  }
+
+  .nav-center a {
+    padding: 12px 4px;
+  }
+
+  .nav-center a::after {
+    display: none;
+  }
+
+  .nav-center a.active {
+    color: var(--accent);
   }
 
   .winners-panel {
@@ -1240,11 +2721,11 @@ body {
   border-radius: 999px;
   border: 2px solid rgba(20, 20, 30, 0.92);
   background-clip: padding-box;
-  box-shadow: 0 0 10px rgba(255, 77, 61, 0.5);
+  box-shadow: 0 0 10px rgba(138, 31, 43, 0.5);
 }
 .auth-modal::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #ff6a5c, var(--accent));
-  box-shadow: 0 0 14px rgba(255, 77, 61, 0.7);
+  background: linear-gradient(180deg, #b23a48, var(--accent));
+  box-shadow: 0 0 14px rgba(138, 31, 43, 0.7);
 }
 .auth-close {
   position: absolute;
@@ -1453,7 +2934,8 @@ body {
    drawn by the OS when open (browsers don't allow full styling of
    it) — setting background/color on <option> at least makes Chromium
    and Firefox render that popup dark instead of the default gray. */
-.auth-field select {
+.auth-field select,
+.profile-field select {
   width: 100%;
   appearance: none;
   -webkit-appearance: none;
@@ -1471,13 +2953,86 @@ body {
   cursor: pointer;
   transition: border-color 0.2s, background-color 0.2s;
 }
-.auth-field select:focus {
+.auth-field select:focus,
+.profile-field select:focus {
   border-color: var(--accent);
   background-color: rgba(255, 255, 255, 0.1);
 }
-.auth-field select option {
+.auth-field select option,
+.profile-field select option {
   background-color: #1a1f2b;
   color: #fff;
+}
+
+/* Progressive enhancement: Chromium's "customizable select" API
+   (appearance: base-select, shipped since Chrome 131) lets the popup
+   itself be restyled — rounded corners, padding between options, our
+   own accent-red hover/selected state — instead of just the flat
+   OS-drawn list the option rule above is limited to. @supports gates
+   it so browsers without the API (still common — Firefox/Safari as of
+   this writing) silently keep that plain-but-dark fallback instead of
+   breaking. Verified in a real Chromium render before shipping this,
+   since the API's browser support is still fairly new. */
+@supports (appearance: base-select) {
+  .auth-field select,
+  .profile-field select {
+    appearance: base-select;
+    /* The fallback rule above paints its own SVG chevron via
+       background-image; base-select mode draws its own native
+       ::picker-icon arrow, so without this the two stacked up into a
+       visible double-arrow. */
+    background-image: none;
+  }
+  .auth-field select::picker(select),
+  .profile-field select::picker(select) {
+    appearance: base-select;
+    background: #1a1f2b;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 6px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+
+    /* The picker is a top-layer popover under the hood, so it can be
+       given an open/close transition the same way a <dialog>/popover
+       can: animate the closed state, flip the animated properties on
+       :popover-open, and use @starting-style below to supply the
+       "before" frame for the opening transition (without it the very
+       first frame has no prior state to transition from, so opening
+       would still snap instantly even though closing animates fine).
+       `allow-discrete` is what lets display/overlay — normally
+       not animatable at all — participate, so the popup stays
+       present-but-fading-out for the transition's duration on close
+       instead of vanishing the instant :popover-open is removed. */
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+    transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+                overlay 0.18s ease allow-discrete, display 0.18s ease allow-discrete;
+  }
+  .auth-field select::picker(select):popover-open,
+  .profile-field select::picker(select):popover-open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  @starting-style {
+    .auth-field select::picker(select):popover-open,
+    .profile-field select::picker(select):popover-open {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.96);
+    }
+  }
+  .auth-field select option,
+  .profile-field select option {
+    border-radius: 8px;
+    padding: 9px 12px;
+    margin: 1px 0;
+  }
+  .auth-field select option:hover,
+  .auth-field select option:focus,
+  .profile-field select option:hover,
+  .profile-field select option:focus {
+    background: var(--accent);
+    color: #fff;
+  }
 }
 
 /* File inputs largely resist styling except for their button part
@@ -1828,7 +3383,7 @@ body {
 }
 .profile-tab.active {
   color: #fff;
-  background: rgba(255, 77, 61, 0.16);
+  background: rgba(138, 31, 43, 0.16);
 }
 .profile-tab-badge {
   display: inline-flex;
@@ -1867,7 +3422,7 @@ body {
   justify-content: center;
   overflow: hidden;
   background: radial-gradient(circle at 35% 30%, var(--maroon) 0%, var(--maroon-dark) 100%);
-  border: 3px solid rgba(255, 77, 61, 0.4);
+  border: 3px solid rgba(138, 31, 43, 0.4);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 .profile-avatar span {
@@ -1954,8 +3509,8 @@ body {
   display: inline-block;
   padding: 0.3rem 0.9rem;
   border-radius: 999px;
-  background: rgba(255, 77, 61, 0.15);
-  border: 1px solid rgba(255, 77, 61, 0.4);
+  background: rgba(138, 31, 43, 0.15);
+  border: 1px solid rgba(138, 31, 43, 0.4);
   color: var(--accent);
   font-size: 0.72rem;
   font-weight: 800;
@@ -2315,20 +3870,20 @@ body {
   opacity: 0.55;
 }
 .friend-btn--primary {
-  background: rgba(255, 77, 61, 0.18);
-  border-color: rgba(255, 77, 61, 0.4);
+  background: rgba(138, 31, 43, 0.18);
+  border-color: rgba(138, 31, 43, 0.4);
   color: #fff;
 }
 .friend-btn--primary:hover {
-  background: rgba(255, 77, 61, 0.3);
+  background: rgba(138, 31, 43, 0.3);
 }
 .friend-btn--danger {
-  background: rgba(255, 77, 61, 0.12);
-  border-color: rgba(255, 77, 61, 0.35);
+  background: rgba(138, 31, 43, 0.12);
+  border-color: rgba(138, 31, 43, 0.35);
   color: #ff8787;
 }
 .friend-btn--danger:hover {
-  background: rgba(255, 77, 61, 0.22);
+  background: rgba(138, 31, 43, 0.22);
 }
 
 @media (max-width: 480px) {
@@ -2363,7 +3918,7 @@ body {
   z-index: -2;
   pointer-events: none;
   background:
-    radial-gradient(1100px 620px at 12% -10%, rgba(255, 77, 61, 0.14), transparent 60%),
+    radial-gradient(1100px 620px at 12% -10%, rgba(138, 31, 43, 0.14), transparent 60%),
     radial-gradient(900px 560px at 100% 0%, rgba(138, 31, 43, 0.18), transparent 55%),
     linear-gradient(180deg, #0c0f16 0%, #090b11 100%);
 }
@@ -2444,6 +3999,52 @@ body {
 .catalog-toolbar .btn {
   padding: 11px 22px;
   font-size: 14px;
+}
+
+/* Region chip — only shown when arriving from map.html via ?region=.
+   Sits below the toolbar so it doesn't fight the search/publish row for
+   space, but stays right above the grid it's filtering. */
+.catalog-region-chip[hidden] {
+  display: none;
+}
+
+.catalog-region-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  margin: -6px 0 18px;
+  padding: 7px 8px 7px 16px;
+  border-radius: 999px;
+  background: rgba(138, 31, 43, 0.14);
+  border: 1px solid rgba(138, 31, 43, 0.4);
+  color: var(--text-light);
+  font-size: 13px;
+}
+
+.catalog-region-chip strong {
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.catalog-region-chip button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-light);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.catalog-region-chip button:hover {
+  background: rgba(255, 255, 255, 0.24);
 }
 
 @media (max-width: 640px) {
@@ -2573,7 +4174,7 @@ body {
 .catalog-search-wrap input:focus {
   border-color: var(--accent);
   background-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 0 0 3px rgba(255, 77, 61, 0.16);
+  box-shadow: 0 0 0 3px rgba(138, 31, 43, 0.16);
 }
 
 /* ---------- Custom sort dropdown (button + listbox) ---------- */
@@ -2663,7 +4264,7 @@ body {
 }
 
 .catalog-select-menu li.is-selected {
-  background: rgba(255, 77, 61, 0.14);
+  background: rgba(138, 31, 43, 0.14);
   color: #fff;
   font-weight: 600;
 }
@@ -2672,78 +4273,6 @@ body {
   content: '✓';
   float: right;
   color: var(--accent);
-}
-
-.catalog-filter-options {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-
-/* Custom checkbox: native ones read as a stray browser-default square
-   against this dark panel. appearance:none removes that, and the
-   check mark is drawn as a background-image (not a pseudo-element —
-   <input> is a replaced element, so ::before/::after aren't reliably
-   supported on it) so it works with just this one element, no extra
-   wrapper markup. */
-.catalog-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
-  margin: 0 -8px;
-  border-radius: 9px;
-  font-size: 0.87rem;
-  color: rgba(255, 255, 255, 0.72);
-  cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease;
-}
-
-.catalog-checkbox:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-/* Toggled by catalog.js alongside the checkbox's own :checked state,
-   so the whole row reads as "selected" — a plain checked box is easy
-   to miss in a quick scan of six stacked options. */
-.catalog-checkbox.is-checked {
-  color: #fff;
-  background: rgba(255, 77, 61, 0.12);
-}
-
-.catalog-checkbox input[type='checkbox'] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 19px;
-  height: 19px;
-  flex-shrink: 0;
-  border-radius: 6px;
-  border: 1.5px solid rgba(255, 255, 255, 0.24);
-  background-color: rgba(255, 255, 255, 0.04);
-  cursor: pointer;
-  transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.catalog-checkbox input[type='checkbox']:hover {
-  border-color: rgba(255, 255, 255, 0.45);
-}
-
-.catalog-checkbox input[type='checkbox']:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.catalog-checkbox input[type='checkbox']:checked {
-  background-color: var(--accent);
-  background-image:
-    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3e%3cpath d='M3.5 8.6l3 3 6-7.2' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e"),
-    linear-gradient(135deg, var(--accent), var(--accent-dark));
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 11px 11px, 100% 100%;
-  border-color: transparent;
-  transform: scale(1.08);
 }
 
 .catalog-reset-btn {
@@ -2889,12 +4418,12 @@ body {
   background: rgba(255, 255, 255, 0.14);
 }
 .article-owner-btn--danger {
-  background: rgba(255, 77, 61, 0.12);
-  border-color: rgba(255, 77, 61, 0.35);
+  background: rgba(138, 31, 43, 0.12);
+  border-color: rgba(138, 31, 43, 0.35);
   color: #ff8787;
 }
 .article-owner-btn--danger:hover {
-  background: rgba(255, 77, 61, 0.22);
+  background: rgba(138, 31, 43, 0.22);
 }
 
 .article-reader-stats {

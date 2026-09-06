@@ -15,12 +15,15 @@ const formatViews = (views) => {
 export const createArticle = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { title, content, category, geoLat, geoLng, locationName } = req.body;
+    const { title, content, category, region, geoLat, geoLng, locationName } = req.body;
 
-    if (!title || !content || !category) {
-      return res.status(400).json({ error: 'Укажите заголовок, текст статьи и категорию.' });
+    if (!title || !content || !region) {
+      return res.status(400).json({ error: 'Укажите заголовок, текст статьи и область.' });
     }
 
+    // The publish form no longer asks for a category — Article.category
+    // is still a required (non-null) DB column, so every article still
+    // needs a value; falls back to a fixed default instead.
     const validCategories = ['Наука', 'Технологии', 'Экология', 'История', 'Эссе', 'Психология'];
     const selectedCategory = validCategories.includes(category) ? category : 'Наука';
 
@@ -36,6 +39,7 @@ export const createArticle = async (req, res) => {
         title,
         content,
         category: selectedCategory,
+        region,
         images: JSON.stringify(imagePaths),
         geoLat: geoLat ? parseFloat(geoLat) : null,
         geoLng: geoLng ? parseFloat(geoLng) : null,
@@ -114,6 +118,11 @@ export const getAllArticles = async (req, res) => {
       category: a.category,
       author: a.author ? a.author.fullName : 'Аноним',
       meta: a.author ? `${a.author.school} · ${a.author.grade}` : 'Студент',
+      // Prefer the article's own region (set at publish time) over the
+      // author's home region — they can differ, e.g. someone from
+      // Almaty writing about Mangystau. Old rows published before this
+      // field existed fall back to the author's region as before.
+      region: a.region || (a.author ? a.author.region : null),
       views: a.viewsCount,
       viewsFormatted: formatViews(a.viewsCount),
       images: JSON.parse(a.images || '[]'),
@@ -285,7 +294,7 @@ export const getArticleById = async (req, res) => {
       author: article.author ? article.author.fullName : 'Аноним',
       authorId: article.authorId,
       meta: article.author ? `${article.author.school} · ${article.author.grade}` : 'Студент',
-      region: article.author ? article.author.region : null,
+      region: article.region || (article.author ? article.author.region : null),
       images: JSON.parse(article.images || '[]'),
       locationName: article.locationName,
       geoLat: article.geoLat,
@@ -358,11 +367,13 @@ export const updateArticle = async (req, res) => {
       return res.status(403).json({ error: 'Вы можете редактировать только свои статьи.' });
     }
 
-    const { title, content, category, locationName } = req.body;
-    if (!title || !content || !category) {
-      return res.status(400).json({ error: 'Укажите заголовок, текст статьи и категорию.' });
+    const { title, content, category, region, locationName } = req.body;
+    if (!title || !content || !region) {
+      return res.status(400).json({ error: 'Укажите заголовок, текст статьи и область.' });
     }
 
+    // Same as CreateArticle — the form no longer sends a category, so
+    // this keeps whatever the article already had instead of resetting it.
     const validCategories = ['Наука', 'Технологии', 'Экология', 'История', 'Эссе', 'Психология'];
     const selectedCategory = validCategories.includes(category) ? category : existing.category;
 
@@ -379,6 +390,7 @@ export const updateArticle = async (req, res) => {
         title,
         content,
         category: selectedCategory,
+        region,
         locationName: locationName || null,
         ...imagesData,
       },

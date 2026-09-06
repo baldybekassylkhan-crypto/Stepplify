@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 
 import { registerUser, loginUser, getUserProfile, updateAvatar, updateProfile } from '../controllers/authController.js';
 import { createArticle, getAllArticles, getRecentArticles, incrementViews, getArticleById, rateArticle, updateArticle, deleteArticle } from '../controllers/articleController.js';
-import { addPoints, getWeeklyTop, getSchoolLeaderboard, getWinnersList } from '../controllers/gamificationController.js';
+import { addPoints, getMonthlyTop, getSchoolLeaderboard, getWinnersList } from '../controllers/gamificationController.js';
 import { searchUsers, sendFriendRequest, respondToFriendRequest, removeFriendship, listFriends } from '../controllers/friendController.js';
 import { aiEditDraft } from '../controllers/aiController.js';
 import { generateTravelRoute, calculateTripCost } from '../controllers/travelController.js';
@@ -73,7 +73,7 @@ router.get('/articles/:id', optionalAuth, getArticleById);
 
 // 3. Геймификация и Соревнования
 router.post('/users/:userId/points', addPoints);
-router.get('/leaderboard/weekly', getWeeklyTop);
+router.get('/leaderboard/monthly', getMonthlyTop);
 router.get('/leaderboard/schools', getSchoolLeaderboard);
 router.get('/winners', getWinnersList);
 

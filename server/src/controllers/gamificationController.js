@@ -46,21 +46,21 @@ export const addPoints = async (req, res) => {
   }
 };
 
-// 2. GetWeeklyTop (Топ-10 недели)
-export const getWeeklyTop = async (req, res) => {
+// 2. GetMonthlyTop (Топ-3 месяца)
+export const getMonthlyTop = async (req, res) => {
   try {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Group point logs by userId for the last 7 days
-    const weeklyLogs = await prisma.pointLog.groupBy({
+    // Group point logs by userId for the last 30 days
+    const monthlyLogs = await prisma.pointLog.groupBy({
       by: ['userId'],
       _sum: {
         points: true,
       },
       where: {
         createdAt: {
-          gte: sevenDaysAgo,
+          gte: thirtyDaysAgo,
         },
       },
       orderBy: {
@@ -68,13 +68,13 @@ export const getWeeklyTop = async (req, res) => {
           points: 'desc',
         },
       },
-      take: 10,
+      take: 3,
     });
 
-    // If no weekly logs yet, fallback to top users by overall points
-    if (weeklyLogs.length === 0) {
+    // If no logs yet this month, fallback to top users by overall points
+    if (monthlyLogs.length === 0) {
       const topUsers = await prisma.user.findMany({
-        take: 10,
+        take: 3,
         orderBy: { points: 'desc' },
         select: {
           id: true,
@@ -91,7 +91,7 @@ export const getWeeklyTop = async (req, res) => {
         id: u.id,
         name: u.fullName,
         meta: `${u.school} · ${u.grade}`,
-        weeklyPoints: u.points,
+        monthlyPoints: u.points,
         totalPoints: u.points,
         level: u.level,
       }));
@@ -99,7 +99,7 @@ export const getWeeklyTop = async (req, res) => {
       return res.json(formattedFallback);
     }
 
-    const userIds = weeklyLogs.map(item => item.userId);
+    const userIds = monthlyLogs.map(item => item.userId);
     const users = await prisma.user.findMany({
       where: { id: { in: userIds } },
       select: {
@@ -114,14 +114,14 @@ export const getWeeklyTop = async (req, res) => {
 
     const userMap = new Map(users.map(u => [u.id, u]));
 
-    const result = weeklyLogs.map((item, index) => {
+    const result = monthlyLogs.map((item, index) => {
       const user = userMap.get(item.userId);
       return {
         rank: index + 1,
         id: item.userId,
         name: user ? user.fullName : 'Пользователь',
         meta: user ? `${user.school} · ${user.grade}` : 'Студент',
-        weeklyPoints: item._sum.points || 0,
+        monthlyPoints: item._sum.points || 0,
         totalPoints: user ? user.points : 0,
         level: user ? user.level : 1,
       };
@@ -129,8 +129,8 @@ export const getWeeklyTop = async (req, res) => {
 
     return res.json(result);
   } catch (error) {
-    console.error('Error in GetWeeklyTop:', error);
-    return res.status(500).json({ error: 'Ошибка при получении недельного топа.' });
+    console.error('Error in GetMonthlyTop:', error);
+    return res.status(500).json({ error: 'Ошибка при получении месячного топа.' });
   }
 };
 

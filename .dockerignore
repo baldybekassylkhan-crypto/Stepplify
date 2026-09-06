@@ -1,0 +1,17 @@
+node_modules
+server/node_modules
+server/.env
+server/dev.db
+server/prisma/dev.db
+server/*.db-journal
+server/*.db-wal
+server/*.db-shm
+server/uploads
+server/server.log
+.git
+.claude
+.vscode
+Desktop*.mp4
+shot.js
+shot2.js
+phrase-*.png

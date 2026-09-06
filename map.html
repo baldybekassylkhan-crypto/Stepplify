@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Каталог статей — Stepplify</title>
+<title>Карта регионов — Stepplify</title>
 <link rel="stylesheet" href="styles.css?v=1786450899" />
 </head>
 <body class="catalog-page">
@@ -13,10 +13,11 @@
   <div class="scroll-progress-fill" id="scrollProgressFill"></div>
 </div>
 
-<!-- No background video here on purpose — the catalog is a working
-     list/filter tool rather than a landing page, so it gets a plain
-     dark panel background instead of the home page's sky/mountain
-     scene (see body.catalog-page in styles.css). -->
+<!-- No background video here on purpose — same reasoning as
+     catalog.html: this is its own destination page, not a landing
+     page, so it gets the plain dark working-panel background (see
+     body.catalog-page in styles.css) instead of the home page's
+     sky/mountain scene. -->
 
 <!-- ============ Top navigation (glass) ============ -->
 <header class="topbar">
@@ -28,9 +29,9 @@
   </a>
 
   <nav class="nav-center" id="navCenter">
-    <a href="catalog.html" class="active" aria-current="page">Каталог статей</a>
+    <a href="catalog.html">Каталог статей</a>
     <a href="index.html">О проекте</a>
-    <a href="map.html">Карта</a>
+    <a href="map.html" class="active" aria-current="page">Карта</a>
   </nav>
 
   <div class="nav-right">
@@ -59,66 +60,19 @@
   </div>
 </header>
 
-<!-- ============ Catalog: article grid (left) + filters (right) ============ -->
-<div class="catalog-layout">
-  <main class="catalog-main">
-    <div class="catalog-toolbar">
-      <div class="catalog-search-wrap catalog-toolbar-search">
-        <input type="text" id="catalogSearch" placeholder="Название, автор, локация..." aria-label="Поиск по статьям" />
-      </div>
-      <div class="catalog-toolbar-right">
-        <span class="catalog-count" id="catalogCount">0 статей</span>
-        <a href="#" class="btn btn-primary" id="publishBtn">Опубликовать статью <span class="arrow">→</span></a>
-      </div>
-    </div>
+<!-- ============ Interactive map — hover a region to zoom into it;
+     regions are the real oblast borders, fetched from
+     assets/kazakhstan-map.svg and injected by script.js so this file
+     doesn't carry ~150KB of path data inline. ============ -->
+<section class="map-section" id="mapSection">
+  <div class="map-wrap" id="kzMapWrap" aria-hidden="true">
+    <div class="map-loading" id="kzMapLoading">Загружаем карту...</div>
+  </div>
 
-    <!-- Shown only when arriving via ?region=... (a click on map.html)
-         — catalog.js fills in the region name and toggles [hidden]. -->
-    <div class="catalog-region-chip" id="catalogRegionChip" hidden>
-      <span>Регион: <strong id="catalogRegionChipName"></strong></span>
-      <button type="button" id="catalogRegionChipClear" aria-label="Убрать фильтр по региону">&times;</button>
-    </div>
-
-    <!-- Populated by catalog.js once articles exist — left empty on
-         purpose for now, just the place where they'll land. -->
-    <div class="catalog-grid" id="catalogGrid"></div>
-  </main>
-
-  <aside class="catalog-sidebar">
-    <div class="catalog-filter-panel">
-      <h4 class="catalog-filter-title">Фильтры</h4>
-
-      <div class="catalog-filter-block">
-        <span class="catalog-filter-label" id="catalogSortLabel">Сортировка</span>
-        <!-- Custom dropdown instead of a native <select> — the native
-             option list can't be fully restyled (it stays OS-drawn),
-             so this is a button + listbox built the same way as the
-             language switcher in the topbar, giving full control over
-             how it looks. catalog.js drives state.sort directly off
-             data-value, no hidden <select> needed. -->
-        <div class="catalog-select" id="catalogSortSelect">
-          <button type="button" class="catalog-select-btn" id="catalogSortBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="catalogSortLabel">
-            <span id="catalogSortValue">Сначала новые</span>
-            <svg class="catalog-select-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M4 6.5l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
-          <ul class="catalog-select-menu" id="catalogSortMenu" role="listbox" tabindex="-1">
-            <li role="option" data-value="recommended">🎯 Рекомендуем для вас</li>
-            <li role="option" class="is-selected" data-value="new">Сначала новые</li>
-            <li role="option" data-value="popular">По популярности</li>
-            <li role="option" data-value="az">По алфавиту (А–Я)</li>
-          </ul>
-        </div>
-      </div>
-
-      <button type="button" class="btn btn-secondary catalog-reset-btn" id="catalogResetBtn">Сбросить фильтры</button>
-    </div>
-  </aside>
-</div>
+  <div class="map-tooltip" id="kzMapTooltip" aria-hidden="true"></div>
+</section>
 
 <script src="script.js?v=1786450899"></script>
-<script src="catalog.js?v=1786450899"></script>
 
 <!-- ============ Auth Modal ============ -->
 <div class="auth-overlay" id="authOverlay" aria-hidden="true">
@@ -251,7 +205,7 @@
   </div>
 </div>
 
-<!-- ============ Top-10 Modal ============ -->
+<!-- ============ Top-3 Monthly Modal ============ -->
 <div class="auth-overlay" id="top10Overlay" aria-hidden="true">
   <div class="auth-modal" role="dialog" aria-modal="true" aria-label="Топ-3 месяца">
     <button class="auth-close" id="top10Close" aria-label="Закрыть">&times;</button>

@@ -25,12 +25,72 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ============ Mobile nav dropdown ============
+  // Below ~900px .nav-center (Каталог статей / О проекте / Карта)
+  // stops being a static row and becomes a toggleable dropdown — this
+  // button is its only way in on a phone, so without this wiring those
+  // links are simply unreachable there.
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  const navCenter = document.getElementById('navCenter');
+
+  if (mobileMenuBtn && navCenter) {
+    const closeMobileMenu = () => {
+      navCenter.classList.remove('open');
+      mobileMenuBtn.setAttribute('aria-expanded', 'false');
+    };
+
+    mobileMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = navCenter.classList.toggle('open');
+      mobileMenuBtn.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    // Picking a link (including #aboutLink, which has its own separate
+    // open/scroll handler elsewhere — this just also closes the
+    // dropdown so it doesn't stay open over the revealed section).
+    navCenter.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', closeMobileMenu);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!navCenter.contains(e.target) && e.target !== mobileMenuBtn) closeMobileMenu();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeMobileMenu();
+    });
+  }
+
   // ============ Typeahead autocomplete (school/university, region) ============
   // Reusable suggestion dropdown, the way education portals suggest
   // your school/region while verifying a school email — matches
   // highlighted inline, arrow keys + Enter to pick, click also works,
   // closes on Escape or a click outside.
   const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // Sets a fixed <select>'s value, but if that value doesn't match any
+  // of its options (e.g. free-text region data from before this field
+  // became a strict list, or a typo like "областьо" someone typed at
+  // registration) it first injects a one-off option carrying that exact
+  // value instead of silently landing on the blank placeholder — used
+  // by both the article region select and the profile region select so
+  // an unmatched value is never lost or blocked from saving. Any
+  // previously injected legacy option on this same element is removed
+  // first, so re-calling it (e.g. re-opening the modal) doesn't pile up
+  // stale one-off options.
+  const setSelectValuePreservingUnknown = (selectEl, value, { legacyLabel = (v) => `${v} (текущее значение)` } = {}) => {
+    if (!selectEl) return;
+    selectEl.querySelectorAll('option[data-legacy-option]').forEach((o) => o.remove());
+    const v = value || '';
+    if (v && !Array.from(selectEl.options).some((o) => o.value === v)) {
+      const legacyOption = document.createElement('option');
+      legacyOption.value = v;
+      legacyOption.textContent = legacyLabel(v);
+      legacyOption.dataset.legacyOption = '1';
+      selectEl.insertBefore(legacyOption, selectEl.options[1] || null);
+    }
+    selectEl.value = v;
+  };
 
   // First letters of the first two words of a name, e.g. "Айгерим
   // Қайратова" -> "АҚ" — the avatar circle's fallback for a reader who
@@ -429,6 +489,30 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   updateNavFromStorage();
 
+  // A stale token in localStorage (past its 7-day expiry, or left over
+  // from an old session) used to leave whichever modal hit it stuck on
+  // a raw "Недействительный или истекший токен." with no way out short
+  // of the reader finding the logout link themselves — reloading the
+  // page doesn't clear it, since the token only gets removed from
+  // storage on an explicit logout. Any authenticated fetch that comes
+  // back 401/403 should call this instead of just printing the error:
+  // it drops the stale session, closes whatever modal was open, and
+  // reopens the login form with an explanation.
+  const handleSessionExpired = () => {
+    localStorage.removeItem('stepplify_token');
+    localStorage.removeItem('stepplify_user');
+    updateNavFromStorage();
+    document.querySelectorAll('.auth-overlay.open').forEach((el) => {
+      if (el === authOverlay) return;
+      el.classList.remove('open');
+      el.setAttribute('aria-hidden', 'true');
+    });
+    authOverlay.classList.add('open');
+    authOverlay.setAttribute('aria-hidden', 'false');
+    tabLogin.click();
+    loginError.textContent = 'Сессия истекла — войдите снова.';
+  };
+
   // Open modal
   signInLink.addEventListener('click', (e) => {
     e.preventDefault();
@@ -552,6 +636,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (publishTitleEl) publishTitleEl.textContent = '✍️ Опубликовать статью';
     if (publishSubmitBtn) publishSubmitBtn.textContent = 'Опубликовать →';
     if (artImagesLabel) artImagesLabel.textContent = 'Фотографии';
+    // Drop any one-off <option> openEditArticle injected below for a
+    // legacy region value that didn't match the fixed list — keeps the
+    // dropdown clean for publishing a brand-new article.
+    document.querySelectorAll('#artRegion option[data-legacy-option]').forEach((o) => o.remove());
   };
 
   const openPublish = (e) => {
@@ -581,7 +669,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (artImagesLabel) artImagesLabel.textContent = 'Фотографии (оставьте пустым, чтобы сохранить текущие)';
 
     document.getElementById('artTitle').value = article.title || '';
-    document.getElementById('artCategory').value = article.category || '';
+
+    // artRegion is a fixed <select> (needed so its value exact-matches a
+    // map region for filtering) but articles published before this field
+    // existed fall back to the author's own region, which was typed
+    // free-text at registration and often won't match any option — e.g.
+    // "Алматы" vs the list's "г. Алматы". Left as-is, the select would
+    // silently land on the blank placeholder and, being required, block
+    // the save with a native validation tooltip that's easy to miss in
+    // this dark modal (looked exactly like the button "didn't work").
+    // setSelectValuePreservingUnknown injects the actual value as a
+    // one-off option instead, so the field is never blank and saving
+    // never gets silently stuck.
+    setSelectValuePreservingUnknown(document.getElementById('artRegion'), article.region);
+
     document.getElementById('artContent').value = article.content || '';
     document.getElementById('artLocation').value = article.locationName || '';
     document.getElementById('artImages').value = '';
@@ -751,7 +852,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const fd = new FormData();
       fd.append('title',    document.getElementById('artTitle').value);
       fd.append('content',  document.getElementById('artContent').value);
-      fd.append('category', document.getElementById('artCategory').value);
+      fd.append('region',   document.getElementById('artRegion').value);
       fd.append('locationName', document.getElementById('artLocation').value);
       const files = document.getElementById('artImages').files;
       for (const f of files) fd.append('images', f);
@@ -765,7 +866,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || (isEditing ? 'Ошибка сохранения' : 'Ошибка публикации'));
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          handleSessionExpired();
+          return;
+        }
+        throw new Error(data.error || (isEditing ? 'Ошибка сохранения' : 'Ошибка публикации'));
+      }
       publishOverlay.classList.remove('open');
       publishOverlay.setAttribute('aria-hidden', 'true');
       document.getElementById('publishForm').reset();
@@ -1027,7 +1134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const gallery = images.length
       ? `<div class="article-reader-gallery">${images.map((src) => `<img src="${src}" alt="" loading="lazy" />`).join('')}</div>`
       : '';
-    const metaLine = [a.meta, a.locationName].filter(Boolean).join(' · ');
+    const metaLine = [a.meta, a.region, a.locationName].filter(Boolean).join(' · ');
     const cachedUser = JSON.parse(localStorage.getItem('stepplify_user') || 'null');
     const isOwner = !!cachedUser && cachedUser.id === a.authorId;
     const ownerActions = isOwner
@@ -1122,8 +1229,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // ============ Top-10 Weekly Modal ============
-  // Not every page has a "Топ-10 недели" trigger — guarded so pages
+  // ============ Top-3 Monthly Modal ============
+  // Not every page has a "Топ-3 месяца" trigger — guarded so pages
   // without one (or without the modal itself) don't break the rest of
   // this script.
   const top10Btn     = document.getElementById('top10Btn');
@@ -1138,7 +1245,7 @@ document.addEventListener('DOMContentLoaded', () => {
       top10Overlay.setAttribute('aria-hidden', 'false');
       top10List.innerHTML = '<div class="top10-loading">Загружаем рейтинг...</div>';
       try {
-        const res = await fetch(`${API_URL}/leaderboard/weekly`);
+        const res = await fetch(`${API_URL}/leaderboard/monthly`);
         const data = await res.json();
         if (!res.ok) throw new Error('Ошибка загрузки');
         const medals = ['🥇', '🥈', '🥉'];
@@ -1150,8 +1257,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="top10-meta">${u.meta}</div>
             </div>
             <div class="top10-pts">
-              <div class="top10-weekly">+${u.weeklyPoints} <span>за неделю</span></div>
-              <div class="top10-total">${u.totalPoints} всего</div>
+              <div class="top10-weekly">+${u.monthlyPoints} <span>за месяц</span></div>
             </div>
           </div>
         `).join('');
@@ -1527,7 +1633,7 @@ document.addEventListener('DOMContentLoaded', () => {
       profileLevelBadge.textContent = levelTitle(cachedUser.level || 1);
       profileSchool.value = cachedUser.school || '';
       profileGrade.value = cachedUser.grade || '';
-      profileRegion.value = cachedUser.region || '';
+      setSelectValuePreservingUnknown(profileRegion, cachedUser.region);
       profilePoints.textContent = cachedUser.points ?? '—';
       profileSaveBtn.disabled = true;
       profileSaveHint.textContent = '';
@@ -1542,14 +1648,21 @@ document.addEventListener('DOMContentLoaded', () => {
           headers: { 'Authorization': `Bearer ${token}` },
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Ошибка загрузки профиля');
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            closeProfileModal();
+            handleSessionExpired();
+            return;
+          }
+          throw new Error(data.error || 'Ошибка загрузки профиля');
+        }
 
         renderAvatarInto(profileAvatarEl, data);
         profileName.value = data.fullName;
         profileLevelBadge.textContent = levelTitle(data.level);
         profileSchool.value = data.school;
         profileGrade.value = data.grade;
-        profileRegion.value = data.region;
+        setSelectValuePreservingUnknown(profileRegion, data.region);
         profilePoints.textContent = data.points;
         profileBaseline = { fullName: data.fullName, school: data.school, grade: data.grade, region: data.region };
         profileArticlesCount.textContent = data.articlesCount;
@@ -1568,42 +1681,1147 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ============ Scroll-entry reveal ============
+  // Section headings ease up into place as their section arrives,
+  // rather than the whole thing appearing fully formed the instant the
+  // seam above it scrolls past. The hidden pre-state is added here, not
+  // in the stylesheet, so a visitor without JS never ends up with
+  // permanently invisible headings; reduced motion skips it entirely.
+  const revealTargets = document.querySelectorAll('.recent-title, .recent-sub');
+  if (revealTargets.length
+      && 'IntersectionObserver' in window
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    revealTargets.forEach((el, i) => {
+      el.classList.add('reveal-up');
+      // Heading first, subtitle just behind it.
+      el.style.transitionDelay = `${i * 90}ms`;
+    });
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-revealed');
+        revealObserver.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px -12% 0px' });
+    revealTargets.forEach((el) => revealObserver.observe(el));
+  }
+
+  // One-shot highlight along the yurt panel's leading edge as it arrives
+  // over the hero — the join is a crisp overlap now, with no fade
+  // smeared over the video, so this is what marks the handover.
+  const yurtEdge = document.getElementById('yurtEdge');
+  if (yurtEdge
+      && 'IntersectionObserver' in window
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const edgeObserver = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      yurtEdge.classList.add('is-lit');
+      edgeObserver.disconnect();
+    }, { rootMargin: '0px 0px -15% 0px' });
+    edgeObserver.observe(yurtEdge);
+  }
+
+  // ============ Nav pill over light sections ============
+  // The pill is glass over the video — white text with shadows — and
+  // switches to the .is-light treatment (see styles.css) over the cream
+  // yurt panel, where that white-on-white is unreadable.
+  //
+  // Which one it needs depends on what is under the pill RIGHT NOW, not
+  // on how far down the page we have got: keying this off "the hero has
+  // scrolled away" left it light for the rest of the page, including the
+  // recent-articles and winners sections, where the dark video is back
+  // behind it and white-on-white returned. So test the light sections
+  // themselves against the band the pill occupies. Pages without one
+  // (catalog, map — dark all the way down) simply never flip.
+  const topbarEl = document.querySelector('.topbar');
+  const litSections = Array.from(document.querySelectorAll('.yurt-section'));
+  if (topbarEl && litSections.length) {
+    const NAV_BAND = 96; // the pill's footprint down from the viewport top
+    const syncTopbar = () => {
+      const overLight = litSections.some((el) => {
+        const r = el.getBoundingClientRect();
+        return r.top <= NAV_BAND && r.bottom >= 0;
+      });
+      topbarEl.classList.toggle('is-light', overLight);
+    };
+    let navTicking = false;
+    const onNavScroll = () => {
+      if (navTicking) return;
+      navTicking = true;
+      requestAnimationFrame(() => { syncTopbar(); navTicking = false; });
+    };
+    window.addEventListener('scroll', onNavScroll, { passive: true });
+    window.addEventListener('resize', onNavScroll, { passive: true });
+    syncTopbar();
+  }
+
+  // ============ Rotating-yurt facts section (scroll-scrubbed) ============
+  // Left half of the section is a yurt rendered from a tiny 3D model —
+  // a cylinder (the wall) plus a dome of revolution (the roof) — that
+  // gets re-projected at whatever angle the scroll position works out
+  // to, so scrolling spins it on its axis. Right half cross-fades to
+  // the next fact every 1/6 of the way through.
+  //
+  // See the .yurt-section comment in styles.css for the progressive
+  // enhancement contract this leans on: index.html already ships the
+  // finished, readable, unpinned state (still yurt + all six facts), so
+  // anything this block fails to do degrades to that rather than to an
+  // empty section or a giant blank runway.
+  (() => {
+    const section = document.getElementById('yurtSection');
+    const svgBody = document.getElementById('yurtBody');
+    const factEls = Array.from(document.querySelectorAll('#yurtFacts .yurt-fact'));
+    const railEls = Array.from(document.querySelectorAll('#yurtRail i'));
+    const countEl = document.getElementById('yurtCount');
+    const hintEl = document.getElementById('yurtHint');
+    if (!section || !svgBody || !factEls.length) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    // ---- The model ----
+    // A yurt is (very nearly) a surface of revolution, which makes the
+    // projection cheap enough to redo every frame without any 3D
+    // library: a point is just (angle around the axis, height above the
+    // ground), and since we're looking from slightly above, its screen
+    // position is x = sin(angle) and y = height + cos(angle) * squash.
+    // The near side of the yurt is wherever cos(angle) > 0.
+    //
+    // These numbers are duplicated in the hand-written still yurt in
+    // index.html (the no-JS state) — keep the two in sync.
+    const CX = 260;         // the yurt's axis, in viewBox units
+    const BASE_Y = 336;     // where the wall meets the ground
+    const WALL_TOP = 210;   // top of the wall
+    const APEX_Y = 104;     // centre of the crown ring (shanyrak)
+    const R = 175;          // wall radius
+    const EAVE_R = 182;     // roof edge — overhangs the wall a little
+    const TOP_R = 48;       // crown radius
+    const K = 0.3;          // ellipse squash — i.e. how high we look from
+    const DOME_H = WALL_TOP - APEX_Y;
+    const BAND_TOP = 222;   // woven belt (baskur) around the wall
+    const BAND_BOTTOM = 246;
+    // The belt's ornaments: the koshkar-muyiz artwork itself instead of
+    // the plain diamonds this used to draw. Points at the keyed-out copy
+    // — the original ornament-gold.png is gold on FULLY OPAQUE white, so
+    // used directly every motif reads as a white box on the maroon belt.
+    const MOTIF_HREF = 'assets/ornament-gold-alpha.png';
+    const XLINK_NS = 'http://www.w3.org/1999/xlink';
+    // 20 x 55 units ~= the wall's 1100-unit circumference, so the band
+    // meets itself all the way round rather than sitting as medallions.
+    const MOTIF_W = 55;
+    const MOTIF_H = 22;
+    const DOOR_TOP = 264;   // wall height the door reaches
+    const DOOR_HALF = 0.3;  // half the door's angular width, in radians
+    // The felt door-curtain (kiiz esik), rolled up and tied above the
+    // doorway. Slightly wider than the door, as it overhangs it, and
+    // thick enough to be a bundle of rolled felt rather than a batten —
+    // at the old 16 units it read as a painted plank however it was
+    // shaded. The top edge tucks a little under the ornament band, the
+    // way the real thing hangs from the wall above the frame.
+    const ROLL_TOP = 240;
+    const ROLL_BOTTOM = 268;
+    const ROLL_HALF = 0.345;
+
+    // Roof profile: radius shrinks from the eave to the crown while the
+    // height climbs fast at first then flattens out — the bent-uyk
+    // silhouette, rather than a plain cone. Deliberately shallow: a yurt
+    // roof is barely a third of the whole height, and anything taller
+    // starts reading as an egg.
+    const domeR = (t) => EAVE_R - (EAVE_R - TOP_R) * Math.pow(t, 1.25);
+    const domeY = (t) => WALL_TOP - DOME_H * Math.sin((t * Math.PI) / 2);
+    const wallX = (a) => CX + R * Math.sin(a);
+    const wallY = (a, h) => h + R * K * Math.cos(a);
+
+    // Counts, not positions: everything below is generated by walking
+    // these evenly around the yurt and letting the projection bunch them
+    // up towards the silhouette. That bunching is what actually reads as
+    // "turning" — a fixed picture with a spin transform would not.
+    const RIBS = 26;        // roof poles (uyk) fanning out of the crown
+    const SEAMS = 22;       // felt seams down the wall
+    const MOTIFS = 20;      // ornaments repeated along the belt
+    const CROWN_GRID = 3;         // bars each way inside the crown ring
+    const CROWN_GRID_SPAN = 0.62; // outermost bar's offset, as a fraction
+                                  // of the crown's radius
+    // How high a full-length bar bows above the ring, as a fraction of
+    // the crown's radius. Deliberately NOT K/2: at exactly that value a
+    // bar running away from the viewer has its control point land on its
+    // own start point — the arch cancels against the depth squash and
+    // that whole set of bars draws as straight posts. Above K it would
+    // poke past the ring's far edge instead.
+    const CROWN_ARCH = 0.22;
+    const RIB_STEPS = 10;   // samples along one roof pole
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const node = (tag, attrs) => {
+      const n = document.createElementNS(NS, tag);
+      Object.keys(attrs).forEach((k) => n.setAttribute(k, attrs[k]));
+      return n;
+    };
+
+    // Front half of the horizontal circle of radius r at height h, as an
+    // arc that sags towards the viewer.
+    const frontArc = (h, r = R) => `M${CX - r} ${h}A${r} ${r * K} 0 0 0 ${CX + r} ${h}`;
+    // The rope trim at the eave and at the foot of the wall. It used to be
+    // the same front arc with a thick round-capped stroke on it, and that
+    // had two faults. The cap stuck out past the end of the arc into open
+    // sky — at the eave, whose radius overhangs the wall's, that left a
+    // red nub hanging off the silhouette that stayed put through the whole
+    // rotation. And a stroke is flat, where this is a rope.
+    //
+    // So it is a filled band instead, swept from the left edge of the
+    // circle round to the right, thickest at the front and tapering to
+    // nothing at both ends — which is what the rope does as it turns away
+    // behind the yurt, and leaves nothing at the edges to poke out.
+    const trimPath = (h, r, width) => {
+      const steps = 28;
+      const at = (i) => -Math.PI / 2 + (Math.PI * i) / steps;
+      const x = (a) => CX + r * Math.sin(a);
+      const y = (a) => h + r * K * Math.cos(a);
+      // Square-rooted so it holds most of its thickness across the front
+      // and gives it all up in the last few degrees, rather than thinning
+      // steadily the whole way round.
+      const w = (a) => (width * Math.sqrt(Math.max(0, Math.cos(a)))) / 2;
+      let d = '';
+      for (let i = 0; i <= steps; i++) {
+        const a = at(i);
+        d += `${i ? 'L' : 'M'}${x(a).toFixed(1)} ${(y(a) - w(a)).toFixed(1)}`;
+      }
+      for (let i = steps; i >= 0; i--) {
+        const a = at(i);
+        d += `L${x(a).toFixed(1)} ${(y(a) + w(a)).toFixed(1)}`;
+      }
+      return `${d}Z`;
+    };
+
+    // The lit crest of that rope: the same sweep, riding the upper half of
+    // the band. One highlight along the top is what turns a filled bar
+    // into something round.
+    const trimCrestPath = (h, r, width) => {
+      const steps = 28;
+      let d = '';
+      for (let i = 0; i <= steps; i++) {
+        const a = -Math.PI / 2 + (Math.PI * i) / steps;
+        const w = (width * Math.sqrt(Math.max(0, Math.cos(a)))) / 2;
+        d += `${i ? 'L' : 'M'}${(CX + r * Math.sin(a)).toFixed(1)} ${(h + r * K * Math.cos(a) - w * 0.42).toFixed(1)}`;
+      }
+      return d;
+    };
+
+    const bandOf = (top, bottom) =>
+      `${frontArc(top)}L${CX + R} ${bottom}A${R} ${R * K} 0 0 1 ${CX - R} ${bottom}Z`;
+
+    const ribPath = (a) => {
+      let d = '';
+      for (let i = 0; i <= RIB_STEPS; i++) {
+        const t = i / RIB_STEPS;
+        const r = domeR(t);
+        d += `${i ? 'L' : 'M'}${(CX + r * Math.sin(a)).toFixed(1)} ${(domeY(t) + r * K * Math.cos(a)).toFixed(1)}`;
+      }
+      return d;
+    };
+
+    const seamPath = (a) =>
+      `M${wallX(a).toFixed(1)} ${wallY(a, WALL_TOP).toFixed(1)}L${wallX(a).toFixed(1)} ${wallY(a, BASE_Y).toFixed(1)}`;
+
+    // Anything laid on the wall wraps around it, so its edges follow the
+    // cylinder rather than being a flat rectangle — sample the arc along
+    // the bottom, then back along the top. Used for the door and for the
+    // rolled curtain above it.
+    const wallPanelPath = (a, half, topY, bottomY) => {
+      const steps = 8;
+      let d = '';
+      for (let i = 0; i <= steps; i++) {
+        const aa = a - half + (2 * half * i) / steps;
+        d += `${i ? 'L' : 'M'}${wallX(aa).toFixed(1)} ${wallY(aa, bottomY).toFixed(1)}`;
+      }
+      for (let i = steps; i >= 0; i--) {
+        const aa = a - half + (2 * half * i) / steps;
+        d += `L${wallX(aa).toFixed(1)} ${wallY(aa, topY).toFixed(1)}`;
+      }
+      return `${d}Z`;
+    };
+    const doorPath = (a) => wallPanelPath(a, DOOR_HALF, DOOR_TOP, BASE_Y);
+    // The roll is the one thing on the wall that isn't a flat panel: a
+    // bundle has ends, and squared-off ones left it reading as a board
+    // however it was shaded. Same sampled top and bottom edges as any wall
+    // panel, but each end closes with a curve bulging past the edge, which
+    // is the cylinder's cap seen almost side-on.
+    const rollPath = (a) => {
+      const steps = 8;
+      const mid = (ROLL_TOP + ROLL_BOTTOM) / 2;
+      const cap = 7; // how far each end bows out past the panel edge
+      const at = (i) => a - ROLL_HALF + (2 * ROLL_HALF * i) / steps;
+      let d = `M${wallX(at(0)).toFixed(1)} ${wallY(at(0), ROLL_TOP).toFixed(1)}`;
+      for (let i = 1; i <= steps; i++) {
+        d += `L${wallX(at(i)).toFixed(1)} ${wallY(at(i), ROLL_TOP).toFixed(1)}`;
+      }
+      const rx = wallX(at(steps));
+      d += `Q${(rx + cap).toFixed(1)} ${wallY(at(steps), mid).toFixed(1)} ${rx.toFixed(1)} ${wallY(at(steps), ROLL_BOTTOM).toFixed(1)}`;
+      for (let i = steps - 1; i >= 0; i--) {
+        d += `L${wallX(at(i)).toFixed(1)} ${wallY(at(i), ROLL_BOTTOM).toFixed(1)}`;
+      }
+      const lx = wallX(at(0));
+      d += `Q${(lx - cap).toFixed(1)} ${wallY(at(0), mid).toFixed(1)} ${lx.toFixed(1)} ${wallY(at(0), ROLL_TOP).toFixed(1)}`;
+      return `${d}Z`;
+    };
+    // The rail across both leaves, at the height a yurt door's cross-piece
+    // sits. Follows the wall like everything else laid on it.
+    const doorRailPath = (a) => {
+      const steps = 8;
+      const y = DOOR_TOP + (BASE_Y - DOOR_TOP) * 0.42;
+      let d = '';
+      for (let i = 0; i <= steps; i++) {
+        const aa = a - DOOR_HALF * 0.97 + (2 * DOOR_HALF * 0.97 * i) / steps;
+        d += `${i ? 'L' : 'M'}${wallX(aa).toFixed(1)} ${wallY(aa, y).toFixed(1)}`;
+      }
+      return d;
+    };
+
+    // A ring pull on each leaf, just off the seam and hanging from the
+    // rail. Closed loops rather than single arcs — an arc on its own came
+    // out as a smile drawn on the door. Built from wall samples rather
+    // than from a circle, since the surface it lies on is turning away
+    // from the viewer and a true circle would sit flat on top of it.
+    const doorPullsPath = (a) => {
+      const y = DOOR_TOP + (BASE_Y - DOOR_TOP) * 0.42 + 2;
+      const r = 0.034;  // angular half-width of a pull
+      const drop = 9;   // how far it hangs below the rail
+      let d = '';
+      for (const side of [-1, 1]) {
+        const c = a + side * DOOR_HALF * 0.34;
+        for (let i = 0; i <= 8; i++) {
+          const aa = c - r + (2 * r * i) / 8;
+          d += `${i ? 'L' : 'M'}${wallX(aa).toFixed(1)} ${(wallY(aa, y) + Math.sin((i / 8) * Math.PI) * drop).toFixed(1)}`;
+        }
+        for (let i = 8; i >= 0; i--) {
+          const aa = c - r + (2 * r * i) / 8;
+          d += `L${wallX(aa).toFixed(1)} ${(wallY(aa, y) + Math.sin((i / 8) * Math.PI) * drop * 0.28).toFixed(1)}`;
+        }
+        d += 'Z';
+      }
+      return d;
+    };
+
+    // The two straps the rolled curtain is tied up with. The comment above
+    // has always said it was tied; until these it simply wasn't, and the
+    // roll read as a painted plank rather than as felt held up by anything.
+    const rollTiesPath = (a) => {
+      let d = '';
+      for (const side of [-1, 1]) {
+        const aa = a + side * ROLL_HALF * 0.52;
+        const x = wallX(aa);
+        // Starts up under the band the curtain hangs from and crosses the
+        // bundle, stopping just inside its lower edge. It used to run on
+        // past onto the door, where maroon strap over maroon door simply
+        // disappeared — everything that has to read stays on the felt.
+        d += `M${x.toFixed(1)} ${(wallY(aa, ROLL_TOP) - 5).toFixed(1)}`;
+        d += `L${x.toFixed(1)} ${(wallY(aa, ROLL_BOTTOM) - 2).toFixed(1)}`;
+      }
+      return d;
+    };
+
+    // The knot on each strap, just under the bundle.
+    const rollKnotsPath = (a) => {
+      let d = '';
+      for (const side of [-1, 1]) {
+        const aa = a + side * ROLL_HALF * 0.52;
+        const x = wallX(aa);
+        const y = wallY(aa, ROLL_BOTTOM) - 4.5;
+        d += `M${(x - 3.2).toFixed(1)} ${y.toFixed(1)}L${(x + 3.2).toFixed(1)} ${y.toFixed(1)}`;
+      }
+      return d;
+    };
+
+    // Bands along the roll's length, inset from its outline. A cylinder
+    // reads as round from its shading before it reads as round from its
+    // outline, and the outline here can't help: the roll is a panel on a
+    // wall, so its edges are the wall's curve, not the bundle's. Light
+    // catches the upper third, the underside falls away.
+    const rollBandPath = (a, from, to) => {
+      const t = ROLL_BOTTOM - ROLL_TOP;
+      return wallPanelPath(a, ROLL_HALF * 0.985, ROLL_TOP + t * from, ROLL_TOP + t * to);
+    };
+    const rollHighlightPath = (a) => rollBandPath(a, 0.08, 0.3);
+    const rollShadePath = (a) => rollBandPath(a, 0.68, 0.97);
+
+    // The spiral seam running the length of the bundle — the edge of the
+    // felt where it finishes wrapping. This is the line that says "rolled"
+    // rather than "solid".
+    const rollCreasePath = (a) => {
+      const steps = 8;
+      const y = ROLL_TOP + (ROLL_BOTTOM - ROLL_TOP) * 0.46;
+      let d = '';
+      for (let i = 0; i <= steps; i++) {
+        const aa = a - ROLL_HALF * 0.86 + (2 * ROLL_HALF * 0.86 * i) / steps;
+        d += `${i ? 'L' : 'M'}${wallX(aa).toFixed(1)} ${wallY(aa, y).toFixed(1)}`;
+      }
+      return d;
+    };
+
+    // The coiled ends. Not drawn as discs: the roll wraps around the wall,
+    // so its end faces point along the wall's tangent, and at the angle
+    // the door is visible from they are nearly edge-on — a circle there
+    // would be a sticker on the surface rather than the end of a bundle.
+    // A short bowed line each side gives the coil's edge instead, which is
+    // all that is left of the end face from the front.
+    const rollCurlPath = (a) => {
+      let d = '';
+      for (const side of [-1, 1]) {
+        const aa = a + side * ROLL_HALF * 0.9;
+        const x = wallX(aa);
+        const yTop = wallY(aa, ROLL_TOP + 4);
+        const yBottom = wallY(aa, ROLL_BOTTOM - 4);
+        d += `M${x.toFixed(1)} ${yTop.toFixed(1)}`;
+        d += `Q${(x + side * 5).toFixed(1)} ${((yTop + yBottom) / 2).toFixed(1)} ${x.toFixed(1)} ${yBottom.toFixed(1)}`;
+      }
+      return d;
+    };
+
+    // Kuldreuish: two sets of parallel bars crossing each other, and
+    // every bar ARCHED up out of the ring's plane — the crown is a
+    // shallow dome of bent rods, not a flat grate. Laid out in the
+    // crown's own plane and then rotated with the yurt: the projection
+    // is affine, so a straight chord stays straight and only the arch
+    // has to be drawn as a curve.
+    const crownPath = (theta) => {
+      const ct = Math.cos(theta);
+      const st = Math.sin(theta);
+      const project = (p, q) => [
+        CX + TOP_R * (p * ct + q * st),
+        APEX_Y + TOP_R * K * (q * ct - p * st),
+      ];
+      let d = '';
+      for (let i = 0; i < CROWN_GRID; i++) {
+        const t = -CROWN_GRID_SPAN + (2 * CROWN_GRID_SPAN * i) / (CROWN_GRID - 1);
+        const half = Math.sqrt(Math.max(0, 1 - t * t)); // chord ends on the rim
+        // A quadratic passes through half its control point's offset, so
+        // the control has to be lifted twice the arch height. Shorter
+        // bars nearer the rim rise less, as bending one radius would.
+        const lift = 2 * TOP_R * CROWN_ARCH * half;
+        for (let axis = 0; axis < 2; axis++) {
+          const [x1, y1] = axis ? project(t, -half) : project(-half, t);
+          const [x2, y2] = axis ? project(t, half) : project(half, t);
+          const [mx, my] = axis ? project(t, 0) : project(0, t);
+          d += `M${x1.toFixed(1)} ${y1.toFixed(1)}`
+            + `Q${mx.toFixed(1)} ${(my - lift).toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+        }
+      }
+      return d;
+    };
+
+    // ---- Build once, then only ever mutate attributes ----
+    // Rebuilding ~70 nodes per scroll frame would be wasteful; the
+    // element set never changes, only each one's path/opacity does.
+    const ribEls = [];
+    const seamEls = [];
+    const motifEls = [];
+    let doorEl = null;
+    let doorSplitEl = null;
+    let doorRailEl = null;
+    let doorPullsEl = null;
+    let rollTiesEl = null;
+    let rollShadeEl = null;
+    let rollHighlightEl = null;
+    let rollCurlEl = null;
+    let rollKnotsEl = null;
+    let rollEl = null;
+    let rollCreaseEl = null;
+    let crownBarEl = null;
+
+    const build = () => {
+      svgBody.textContent = ''; // drop the hand-written no-JS yurt
+      const frag = document.createDocumentFragment();
+
+      frag.appendChild(node('ellipse', {
+        cx: CX, cy: BASE_Y + 10, rx: R * 1.17, ry: R * K * 0.64, fill: 'url(#yurtShadowGrad)',
+      }));
+      const wallD = `${frontArc(WALL_TOP)}L${CX + R} ${BASE_Y}A${R} ${R * K} 0 0 1 ${CX - R} ${BASE_Y}Z`;
+      frag.appendChild(node('path', { d: wallD, fill: 'url(#yurtWallGrad)' }));
+
+      // The ornaments are the one thing on the wall not built from the
+      // cylinder projection itself — they are rectangles laid on it — so
+      // near the silhouette a corner can still reach a couple of units
+      // past the wall's edge. Clipping them to the wall settles it for
+      // every angle at once, and is what the wall would really do: it
+      // occludes anything that carries on round the back.
+      const wallClip = node('clipPath', { id: 'yurtWallClip' });
+      wallClip.appendChild(node('path', { d: wallD }));
+      frag.appendChild(wallClip);
+
+      for (let i = 0; i < SEAMS; i++) {
+        const el = node('path', { class: 'yurt-seam', d: '', opacity: 0 });
+        seamEls.push(el);
+        frag.appendChild(el);
+      }
+
+      frag.appendChild(node('path', { class: 'yurt-band', d: bandOf(BAND_TOP, BAND_BOTTOM) }));
+      const motifLayer = node('g', { 'clip-path': 'url(#yurtWallClip)' });
+      frag.appendChild(motifLayer);
+      for (let i = 0; i < MOTIFS; i++) {
+        // The shape is drawn around its own origin, so the horizontal
+        // squash in render() foreshortens it about its middle, like
+        // every other point on the wall.
+        const el = node('image', {
+          class: 'yurt-motif',
+          x: -MOTIF_W / 2,
+          y: -MOTIF_H / 2,
+          width: MOTIF_W,
+          height: MOTIF_H,
+          preserveAspectRatio: 'none',
+          opacity: 0,
+        });
+        el.setAttribute('href', MOTIF_HREF);
+        // Older renderers still want the xlink form; harmless elsewhere.
+        el.setAttributeNS(XLINK_NS, 'xlink:href', MOTIF_HREF);
+        motifEls.push(el);
+        motifLayer.appendChild(el);
+      }
+
+      doorEl = node('path', { class: 'yurt-door', d: '', opacity: 0 });
+      frag.appendChild(doorEl);
+      doorSplitEl = node('path', { class: 'yurt-door-split', d: '', opacity: 0 });
+      frag.appendChild(doorSplitEl);
+      doorRailEl = node('path', { class: 'yurt-door-rail', d: '', opacity: 0 });
+      frag.appendChild(doorRailEl);
+      doorPullsEl = node('path', { class: 'yurt-door-pull', d: '', opacity: 0 });
+      frag.appendChild(doorPullsEl);
+      rollEl = node('path', { class: 'yurt-roll', d: '', opacity: 0 });
+      frag.appendChild(rollEl);
+      rollShadeEl = node('path', { class: 'yurt-roll-shade', d: '', opacity: 0 });
+      frag.appendChild(rollShadeEl);
+      rollHighlightEl = node('path', { class: 'yurt-roll-hi', d: '', opacity: 0 });
+      frag.appendChild(rollHighlightEl);
+      rollCreaseEl = node('path', { class: 'yurt-roll-crease', d: '', opacity: 0 });
+      frag.appendChild(rollCreaseEl);
+      rollCurlEl = node('path', { class: 'yurt-roll-curl', d: '', opacity: 0 });
+      frag.appendChild(rollCurlEl);
+      rollTiesEl = node('path', { class: 'yurt-roll-tie', d: '', opacity: 0 });
+      frag.appendChild(rollTiesEl);
+      rollKnotsEl = node('path', { class: 'yurt-roll-knot', d: '', opacity: 0 });
+      frag.appendChild(rollKnotsEl);
+      frag.appendChild(node('path', { class: 'yurt-base', d: trimPath(BASE_Y, R, 5) }));
+      frag.appendChild(node('path', { class: 'yurt-trim-crest', d: trimCrestPath(BASE_Y, R, 5) }));
+
+      // Roof silhouette: up the left profile, over the crown, down the
+      // right profile, closed along the front half of the eave.
+      let dome = '';
+      for (let i = 0; i <= RIB_STEPS; i++) {
+        const t = i / RIB_STEPS;
+        dome += `${i ? 'L' : 'M'}${(CX - domeR(t)).toFixed(1)} ${domeY(t).toFixed(1)}`;
+      }
+      dome += `A${TOP_R} ${TOP_R * K} 0 0 1 ${CX + TOP_R} ${APEX_Y}`;
+      for (let i = RIB_STEPS; i >= 0; i--) {
+        const t = i / RIB_STEPS;
+        dome += `L${(CX + domeR(t)).toFixed(1)} ${domeY(t).toFixed(1)}`;
+      }
+      dome += `A${EAVE_R} ${EAVE_R * K} 0 0 1 ${CX - EAVE_R} ${WALL_TOP}Z`;
+      frag.appendChild(node('path', { d: dome, fill: 'url(#yurtDomeGrad)' }));
+      frag.appendChild(node('path', { class: 'yurt-eave', d: trimPath(WALL_TOP, EAVE_R, 5.5) }));
+      frag.appendChild(node('path', { class: 'yurt-trim-crest', d: trimCrestPath(WALL_TOP, EAVE_R, 5.5) }));
+
+      for (let i = 0; i < RIBS; i++) {
+        const el = node('path', { class: 'yurt-rib', d: '', opacity: 0 });
+        ribEls.push(el);
+        frag.appendChild(el);
+      }
+
+      frag.appendChild(node('ellipse', { class: 'yurt-crown-fill', cx: CX, cy: APEX_Y, rx: TOP_R, ry: TOP_R * K }));
+      crownBarEl = node('path', { class: 'yurt-crown-bar', d: crownPath(0) });
+      frag.appendChild(crownBarEl);
+      frag.appendChild(node('ellipse', { class: 'yurt-crown-rim', cx: CX, cy: APEX_Y, rx: TOP_R, ry: TOP_R * K }));
+      frag.appendChild(node('ellipse', {
+        class: 'yurt-crown-rim-inner',
+        cx: CX,
+        cy: APEX_Y,
+        rx: TOP_R - 4.5,
+        ry: (TOP_R - 4.5) * K,
+      }));
+
+      svgBody.appendChild(frag);
+    };
+
+    // Anything on the far side is hidden by the felt; anything close to
+    // the silhouette fades out instead of blinking off there.
+    const facing = (a, fade) => {
+      const c = Math.cos(a);
+      return c <= 0 ? 0 : Math.min(1, c / fade);
+    };
+
+    const render = (theta) => {
+      for (let i = 0; i < SEAMS; i++) {
+        const a = theta + (i * 2 * Math.PI) / SEAMS;
+        const vis = facing(a, 0.45);
+        seamEls[i].setAttribute('opacity', (vis * 0.3).toFixed(3));
+        if (vis) seamEls[i].setAttribute('d', seamPath(a));
+      }
+
+      const bandMid = (BAND_TOP + BAND_BOTTOM) / 2;
+      for (let i = 0; i < MOTIFS; i++) {
+        const a = theta + (i * 2 * Math.PI) / MOTIFS;
+        const vis = facing(a, 0.4);
+        motifEls[i].setAttribute('opacity', (vis * 0.95).toFixed(3));
+        if (!vis) continue;
+        // Not just a horizontal squash: the belt runs along an ellipse,
+        // so towards the silhouette it also tilts, and an ornament that
+        // stays level pokes out above and below it. Mapping the motif's
+        // own x-axis onto the belt's tangent — (cos a, -K sin a), the
+        // derivative of the projection — squashes and tilts it in one
+        // matrix, so every ornament lies along the belt however far
+        // round it has turned.
+        const c = Math.cos(a);
+        const sn = Math.sin(a);
+        motifEls[i].setAttribute(
+          'transform',
+          `matrix(${c.toFixed(4)} ${(-K * sn).toFixed(4)} 0 1 ${wallX(a).toFixed(1)} ${wallY(a, bandMid).toFixed(1)})`,
+        );
+      }
+
+      const doorVis = facing(theta, 0.35);
+      doorEl.setAttribute('opacity', doorVis.toFixed(3));
+      doorSplitEl.setAttribute('opacity', (doorVis * 0.8).toFixed(3));
+      rollEl.setAttribute('opacity', doorVis.toFixed(3));
+      rollCreaseEl.setAttribute('opacity', (doorVis * 0.75).toFixed(3));
+      doorRailEl.setAttribute('opacity', (doorVis * 0.85).toFixed(3));
+      doorPullsEl.setAttribute('opacity', (doorVis * 0.9).toFixed(3));
+      // Squared, unlike everything else here: the straps are maroon on
+      // pale felt, so they hold their contrast long after the bundle
+      // under them has faded out, and a linear fade left them hanging on
+      // the wall as red sticks with nothing beneath them.
+      rollTiesEl.setAttribute('opacity', (doorVis * doorVis * 0.9).toFixed(3));
+      rollShadeEl.setAttribute('opacity', (doorVis * 0.9).toFixed(3));
+      rollHighlightEl.setAttribute('opacity', (doorVis * 0.85).toFixed(3));
+      rollCurlEl.setAttribute('opacity', (doorVis * 0.8).toFixed(3));
+      rollKnotsEl.setAttribute('opacity', (doorVis * doorVis * 0.9).toFixed(3));
+      if (doorVis) {
+        doorEl.setAttribute('d', doorPath(theta));
+        doorSplitEl.setAttribute(
+          'd',
+          `M${wallX(theta).toFixed(1)} ${wallY(theta, BASE_Y).toFixed(1)}L${wallX(theta).toFixed(1)} ${wallY(theta, DOOR_TOP).toFixed(1)}`,
+        );
+        doorRailEl.setAttribute('d', doorRailPath(theta));
+        doorPullsEl.setAttribute('d', doorPullsPath(theta));
+        rollEl.setAttribute('d', rollPath(theta));
+        rollShadeEl.setAttribute('d', rollShadePath(theta));
+        rollHighlightEl.setAttribute('d', rollHighlightPath(theta));
+        rollCreaseEl.setAttribute('d', rollCreasePath(theta));
+        rollCurlEl.setAttribute('d', rollCurlPath(theta));
+        rollTiesEl.setAttribute('d', rollTiesPath(theta));
+        rollKnotsEl.setAttribute('d', rollKnotsPath(theta));
+      }
+
+      for (let i = 0; i < RIBS; i++) {
+        const a = theta + (i * 2 * Math.PI) / RIBS;
+        const vis = facing(a, 0.4);
+        ribEls[i].setAttribute('opacity', (vis * 0.5).toFixed(3));
+        if (vis) ribEls[i].setAttribute('d', ribPath(a));
+      }
+
+      crownBarEl.setAttribute('d', crownPath(theta));
+    };
+
+    // ---- Ridges ----
+    // Scroll drives the horizon as well as the yurt: each ridge slides
+    // sideways at its own rate (nearer ones faster — plain parallax) and
+    // rises and falls on a sine of the same scroll position. Giving each
+    // layer a different phase is what turns five ridges sliding together
+    // into swell rolling through them. Amplitudes are in viewBox units,
+    // which the SVG maps to roughly one screen pixel each.
+    const hillEls = Array.from(section.querySelectorAll('.yurt-hill'));
+    const HILL_MOTION = [
+      { slide: -20, lift: 6, phase: 0 },
+      { slide: -40, lift: 8, phase: 0.6 },
+      { slide: -66, lift: 10, phase: 1.2 },
+      { slide: -96, lift: 12, phase: 1.8 },
+      { slide: -132, lift: 14, phase: 2.4 },
+    ];
+    // The range is further off than any of them, so it barely moves —
+    // that near-stillness against the sliding grass is the whole reason
+    // it reads as distance. It doesn't rise and fall either: swell in a
+    // mountain would look like an earthquake. The snow caps have to be
+    // carried along with the peaks they sit on, hence the class rather
+    // than a query for the ridges alone.
+    const mtnFarEls = Array.from(section.querySelectorAll('.yurt-mountains .is-far'));
+    const mtnNearEls = Array.from(section.querySelectorAll('.yurt-mountains .is-near'));
+    const MTN_FAR_SLIDE = -7;
+    const MTN_NEAR_SLIDE = -13;
+    const WAVE_CYCLES = 2; // rises and falls twice over the whole section
+    const HALO_TURNS = 0.55; // revolutions of the sun wheel, counter to the yurt
+
+    // ---- Time of day ----
+    // One pass down the section is one full day: morning at the first
+    // fact, an evening in the middle of it, night, and morning again by
+    // the last. Every colour that has to move with it is blended from the
+    // same three palettes here, so the sky, the mountains, the grass and
+    // the text can't drift out of step with each other. The stylesheet
+    // carries each daylight value as its own var() fallback, which is
+    // exactly what a visitor without JS - or with reduced motion, which
+    // returns above - sees: a section frozen at midday.
+    const PALETTES = {
+      day: {
+        '--sky-top':  [12, 70, 146],
+        '--sky-mid':  [58, 130, 200],
+        // The horizon keeps a paler band than the zenith in all three
+        // palettes - the sky thinning towards the ground is what gives
+        // the flat scene its depth, and it is also the half the facts sit
+        // over, so it cannot go as deep without taking the type with it.
+        '--sky-low':  [134, 189, 228],
+        // Distance haze: the far range is lighter and bluer than the near
+        // one, which is what separates them once both are silhouettes.
+        '--mtn-far':        [158, 184, 208],
+        '--mtn-far-shade':  [132, 162, 192],
+        '--mtn-near':       [110, 143, 178],
+        '--mtn-near-shade': [86, 118, 155],
+        '--mtn-snow':       [240, 247, 253],
+        '--mtn-snow-shade': [211, 226, 241],
+        // Midday sun, kept off pure white so it still reads as a disc
+        // against cloud rather than as a hole in the sky.
+        '--sun':      [255, 226, 140],
+        '--sun-edge': [255, 197, 94],
+      },
+      evening: {
+        '--sky-top':  [46, 74, 125],
+        '--sky-mid':  [219, 132, 104],
+        '--sky-low':  [255, 200, 140],
+        // Peaks catch the last of the light while the ground below has
+        // already lost it: warm on the snow, cold and purple in the rock.
+        '--mtn-far':        [150, 120, 150],
+        '--mtn-far-shade':  [120, 92, 126],
+        '--mtn-near':       [104, 80, 112],
+        '--mtn-near-shade': [80, 59, 91],
+        '--mtn-snow':       [250, 210, 194],
+        '--mtn-snow-shade': [223, 170, 165],
+        '--sun':      [255, 168, 92],
+        '--sun-edge': [244, 118, 58],
+      },
+      night: {
+        '--sky-top':  [7, 13, 36],
+        '--sky-mid':  [16, 26, 56],
+        '--sky-low':  [30, 43, 74],
+        '--mtn-far':        [26, 35, 60],
+        '--mtn-far-shade':  [20, 27, 50],
+        '--mtn-near':       [17, 24, 45],
+        '--mtn-near-shade': [12, 18, 37],
+        // Moonlit rather than lit: bright enough to pick the peaks out of
+        // the silhouette, dim enough that the caps aren't the first thing
+        // the eye lands on in a dark frame.
+        '--mtn-snow':       [70, 84, 118],
+        '--mtn-snow-shade': [54, 66, 99],
+        // Never seen — the sun is fully faded out well before here — but
+        // every palette has to carry every key for the blend to work.
+        '--sun':      [255, 168, 92],
+        '--sun-edge': [244, 118, 58],
+      },
+    };
+
+    // Where each state sits along the runway, and how long it holds. A
+    // pair of stops on the same palette is a plateau: without them the
+    // section is one continuous fade with no actual day, evening or night
+    // in it, and the evening in particular would be a colour the scroll
+    // passes through rather than a place it visits. Roughly a fact each:
+    // day, evening, night, then dawn - which reuses the evening palette,
+    // the same light running the other way - and back to day.
+    const TIMELINE = [
+      [0.00, 'day'],
+      [0.16, 'day'],
+      [0.31, 'evening'],
+      [0.42, 'evening'],
+      [0.55, 'night'],
+      [0.71, 'night'],
+      [0.82, 'evening'],
+      [0.88, 'evening'],
+      [1.00, 'day'],
+    ];
+
+    // The type is not in the palettes above, because it has to stay
+    // legible the whole way through rather than merely end up the right
+    // colour. Each of these carries a third, dusk stop between its
+    // daylight and night values: the daytime greys were picked to sit on
+    // white, and have nothing left on a sky that has gone dim. Leaning
+    // them towards black first keeps them readable right up to the point
+    // where the sky is dark enough for the swap to light. See renderSky.
+    const INK_RAMPS = [
+      // The dusk and night stops are deliberately pushed apart, hardest
+      // on the body copy: the swap happens while the sky still has some
+      // light in it, and the further each side is from that the better
+      // the one frame it lands on reads. Measured either side of the
+      // step, this is about as good as a two-state swap gets.
+      ['--ink',      [16, 24, 34, 1],     [12, 18, 26, 1],    [237, 243, 251, 1]],
+      // Daylight value is well darker than the grey this started as: that
+      // one was picked to sit on cream, and every step the sky took
+      // towards a real blue cost it contrast. At this depth of sky only
+      // something this close to black still clears 4.5:1 - the hierarchy
+      // between it and the headline above rides on size and weight now
+      // rather than on tone.
+      ['--ink-soft', [26, 33, 42, 1],     [14, 20, 28, 1],    [206, 217, 231, 1]],
+      ['--ink-mute', [16, 24, 34, 0.72],  [12, 18, 26, 0.88], [226, 236, 248, 0.7]],
+      ['--warm',     [138, 31, 43, 1],    [88, 15, 25, 1],    [233, 152, 161, 1]],
+      ['--rail',     [138, 31, 43, 0.15], [138, 31, 43, 0.3], [226, 236, 248, 0.22]],
+    ];
+
+    const clamp01 = (t) => Math.min(1, Math.max(0, t));
+    const smoothstep = (t) => t * t * (3 - 2 * t);
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    // Two-stage: day -> dusk as the light goes, then the whole thing ->
+    // its night value across the swap. Ramps with no dusk stop of their
+    // own just hold their daylight colour until the swap.
+    const applyRamps = (ramps, toDusk, toNight) => {
+      ramps.forEach(([name, day, dusk, night]) => {
+        const from = dusk || day;
+        const parts = [0, 1, 2].map((i) => Math.round(
+          lerp(lerp(day[i], from[i], toDusk), night[i], toNight),
+        ));
+        const a = lerp(lerp(day[3], from[3], toDusk), night[3], toNight).toFixed(3);
+        section.style.setProperty(name, `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${a})`);
+      });
+    };
+
+    // Which two states the given point on the runway falls between, and
+    // how far across. Eased rather than linear so each state settles into
+    // the next instead of arriving at a constant rate and stopping dead.
+    const stateAt = (p) => {
+      let i = 0;
+      while (i < TIMELINE.length - 2 && p > TIMELINE[i + 1][0]) i++;
+      const [pFrom, from] = TIMELINE[i];
+      const [pTo, to] = TIMELINE[i + 1];
+      const span = pTo - pFrom;
+      return { from, to, t: span > 0 ? smoothstep(clamp01((p - pFrom) / span)) : 0 };
+    };
+
+    // Where the ink swaps from its dusk colours to its night ones, on the
+    // night weight below. Not the middle: it is the point where the sky
+    // behind the facts has darkened just far enough that near-white reads
+    // better on it than near-black. That crossing is a property of the
+    // ink values and of the palettes either side of it, so it has to be
+    // re-solved whenever any of those are retuned - deepening the daylight
+    // blue alone once moved it by a tenth. Solved against the gradient at
+    // the height the body copy actually sits at, where both sides come out
+    // even; anywhere else one of the two is worse.
+    const INK_SWAP = 0.417;
+
+    const renderSky = (p) => {
+      const { from, to, t } = stateAt(p);
+      const a = PALETTES[from];
+      const b = PALETTES[to];
+      Object.keys(a).forEach((name) => {
+        const parts = [0, 1, 2].map((i) => Math.round(lerp(a[name][i], b[name][i], t)));
+        section.style.setProperty(name, `rgb(${parts[0]}, ${parts[1]}, ${parts[2]})`);
+      });
+      // How much of each state is showing right now. The scene reads off
+      // these rather than off the palettes: stars, the moon and the birds
+      // care only about how dark it is, and the grass wants the evening's
+      // warmth without having to know which two states it sits between.
+      const night = (from === 'night' ? 1 - t : 0) + (to === 'night' ? t : 0);
+      const evening = (from === 'evening' ? 1 - t : 0) + (to === 'evening' ? t : 0);
+      section.style.setProperty('--night', night.toFixed(4));
+      section.style.setProperty('--evening', evening.toFixed(4));
+      // Type cannot ride the palettes. Any crossfade from dark to light
+      // goes through mid-grey, and it would be doing that exactly as the
+      // sky passes through a middling tone of its own - against which only
+      // near-black or near-white has any contrast at all. Tied to scroll,
+      // the visitor can stop dead in the middle of that and read nothing.
+      //
+      // So the ink leans into black as the light goes, which holds it
+      // against the darkening sky, and then *steps* to its night colours.
+      // The smoothing is a CSS colour transition instead: driven by time
+      // rather than by scroll position, it can be passed through but
+      // never parked in, and it reads as a lamp coming on.
+      applyRamps(INK_RAMPS, smoothstep(clamp01(night / INK_SWAP)), night >= INK_SWAP ? 1 : 0);
+    };
+
+    // Stars are built here rather than shipped in the markup because
+    // they have no daytime state to degrade to: without this block
+    // running there is no night for them to belong to. Seeded rather
+    // than Math.random so a resize can't reshuffle the constellation
+    // under a visitor who is looking straight at it.
+    const buildStars = () => {
+      const backdrop = section.querySelector('.yurt-backdrop');
+      if (!backdrop) return;
+      const sky = node('svg', {
+        class: 'yurt-stars',
+        viewBox: '0 0 100 100',
+        preserveAspectRatio: 'none',
+        'aria-hidden': 'true',
+      });
+      let seed = 20260906;
+      const rnd = () => {
+        seed = (seed * 1103515245 + 12345) % 2147483648;
+        return seed / 2147483648;
+      };
+      for (let i = 0; i < 60; i++) {
+        // Kept to the top ~58% of the sky: any lower and they come out
+        // below the horizon, sitting in the grass.
+        const star = node('circle', {
+          cx: (rnd() * 100).toFixed(2),
+          cy: (rnd() * 58).toFixed(2),
+          r: (0.09 + rnd() * 0.15).toFixed(3),
+          opacity: (0.4 + rnd() * 0.6).toFixed(2),
+        });
+        if (i % 3 === 0) {
+          star.classList.add('is-twinkling');
+          star.style.setProperty('--tw-dur', `${(2.8 + rnd() * 3.4).toFixed(2)}s`);
+          star.style.setProperty('--tw-delay', `${(-rnd() * 6).toFixed(2)}s`);
+        }
+        sky.appendChild(star);
+      }
+      backdrop.prepend(sky);
+    };
+
+    const renderHills = (p) => {
+      hillEls.forEach((el, i) => {
+        const m = HILL_MOTION[i] || HILL_MOTION[HILL_MOTION.length - 1];
+        const x = m.slide * p;
+        const y = Math.sin(p * Math.PI * 2 * WAVE_CYCLES + m.phase) * m.lift;
+        // The transform ATTRIBUTE, not a CSS transform: keeps this out
+        // of the way of anything the stylesheet may animate later.
+        el.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
+      });
+      // Each range moves as one piece — silhouette, shading and snow
+      // together — or the snow would slide off the peaks it sits on.
+      const shift = (els, slide) => {
+        const x = (slide * p).toFixed(1);
+        els.forEach((el) => el.setAttribute('transform', `translate(${x} 0)`));
+      };
+      shift(mtnFarEls, MTN_FAR_SLIDE);
+      shift(mtnNearEls, MTN_NEAR_SLIDE);
+    };
+
+    // ---- Scroll scrubbing ----
+    const steps = factEls.length;
+    const TURNS = 1; // full revolutions across the whole section
+    const pad = (n) => String(n).padStart(2, '0');
+    let current = -1;
+
+    const setFact = (i) => {
+      if (i === current) return;
+      current = i;
+      factEls.forEach((el, j) => el.classList.toggle('is-active', j === i));
+      railEls.forEach((el, j) => el.classList.toggle('is-done', j <= i));
+      if (countEl) countEl.textContent = `${pad(i + 1)} / ${pad(steps)}`;
+    };
+
+    const update = () => {
+      const runway = section.offsetHeight - window.innerHeight;
+      const p = runway > 0
+        ? Math.min(1, Math.max(0, -section.getBoundingClientRect().top / runway))
+        : 0;
+      render(p * TURNS * 2 * Math.PI);
+      renderHills(p);
+      renderSky(p);
+      // Sun wheel behind the yurt, turning the other way and slower, so
+      // the two read as separate objects rather than one rigid piece.
+      // Fed in as a variable because the element's own transform also
+      // has to centre it — see .yurt-halo in styles.css.
+      section.style.setProperty('--halo-turn', `${(-p * HALO_TURNS * 360).toFixed(2)}deg`);
+      setFact(Math.min(steps - 1, Math.floor(p * steps)));
+      if (hintEl) hintEl.classList.toggle('is-fading', p > 0.03);
+    };
+
+    build();
+    buildStars();
+    // The runway is a viewport to settle into the pin plus a slice per
+    // fact (see styles.css), so the section stretches with the list
+    // instead of the facts flicking past faster the more there are.
+    section.style.setProperty('--yurt-steps', steps);
+    section.classList.add('js-yurt-active');
+
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { update(); ticking = false; });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+
+    setFact(0);
+    update();
+  })();
+
   // Rotating headline tail — cycles through phrases with a fade/blur
   // swap, same idea as the hero on grader.cloud
   const rotator = document.getElementById('rotator');
   if (rotator) {
     const phrases = [
-      'со всего Казахстана',
+      'о своём крае',
+      'о малоизвестных местах',
       'и находи читателей',
       'получай отклики',
-      'за считанные минуты',
       'выиграй путёвку',
     ];
-    // Longer phrases shrink to fit on one line instead of wrapping —
-    // scale is relative to a "normal" ~20-char phrase (1em), with a
-    // floor so nothing gets unreadably small.
-    const baselineLength = 20;
-    const minScale = 0.6;
-    const sizePhrase = (text) => {
-      const scale = Math.min(1, baselineLength / text.length);
-      rotator.style.fontSize = Math.max(minScale, scale).toFixed(3) + 'em';
+    // Longer phrases shrink to fit the line instead of wrapping, which
+    // is what holds the headline to three lines. Guessing the scale from
+    // character count (as this used to) can't know the real width —
+    // "о малоизвестных местах" still wrapped — so measure the rendered
+    // phrase against the line it has to fit in, with a floor so nothing
+    // ends up unreadably small.
+    const minScale = 0.52;
+    const slot = rotator.parentElement;
+    const fitPhrase = () => {
+      rotator.style.fontSize = '1em';
+      const available = slot.getBoundingClientRect().width;
+      const needed = rotator.getBoundingClientRect().width;
+      if (!available || !needed || needed <= available) return;
+      rotator.style.fontSize = `${Math.max(minScale, available / needed).toFixed(3)}em`;
     };
 
     let index = 0;
     const swapDuration = 350;
     const holdDuration = 2600;
 
-    sizePhrase(phrases[index]);
+    fitPhrase();
+    window.addEventListener('resize', fitPhrase, { passive: true });
 
     setInterval(() => {
       rotator.classList.add('is-swapping');
       setTimeout(() => {
         index = (index + 1) % phrases.length;
         rotator.textContent = phrases[index];
-        sizePhrase(phrases[index]);
+        // Measured while the phrase is still invisible mid-swap, so the
+        // resize never shows.
+        fitPhrase();
         rotator.classList.remove('is-swapping');
       }, swapDuration);
     }, holdDuration);
+  }
+
+  // ============ Interactive regions map ============
+  // The ~150KB of oblast path data lives in assets/kazakhstan-map.svg
+  // (not inline in index.html) — fetch it once and inject it into the
+  // page, then wire up hover/tap so a region lifts to the front of its
+  // neighbors (SVG has no z-index, so "front" means moving the element
+  // to the end of its parent) and a name tooltip follows the pointer.
+  const kzMapWrap    = document.getElementById('kzMapWrap');
+  const kzMapTooltip = document.getElementById('kzMapTooltip');
+
+  if (kzMapWrap && kzMapTooltip) {
+    fetch('assets/kazakhstan-map.svg')
+      .then((res) => {
+        if (!res.ok) throw new Error('Не удалось загрузить карту');
+        return res.text();
+      })
+      .then((svgMarkup) => {
+        kzMapWrap.innerHTML = svgMarkup;
+        kzMapWrap.setAttribute('aria-hidden', 'false');
+
+        const mapSvg = kzMapWrap.querySelector('svg');
+
+        const showTooltip = (name, x, y) => {
+          kzMapTooltip.innerHTML = `${escapeHtml(name)}<span class="map-tooltip-hint">Нажмите — статьи региона</span>`;
+          kzMapTooltip.style.left = `${x}px`;
+          kzMapTooltip.style.top = `${y}px`;
+          kzMapTooltip.classList.add('visible');
+        };
+        const hideTooltip = () => kzMapTooltip.classList.remove('visible');
+
+        // Parallax tilt — the whole map continuously leans toward the
+        // pointer, sharing .map-wrap's perspective with each region's
+        // hover translateZ so the lean and the "popped up" region read
+        // as one 3D surface, not two unrelated effects. Tracked on
+        // `window` (not just while over the map) so the map keeps
+        // following the cursor around the rest of the page instead of
+        // resetting flat the moment the pointer leaves it, and eased
+        // through a rAF loop rather than a CSS transition — restarting
+        // a CSS transition from wherever it currently is on every single
+        // mousemove is what made the old version feel like it was
+        // snapping instead of gliding.
+        const MAX_TILT = 18;
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+        let targetRotateX = 0;
+        let targetRotateY = 0;
+        let currentRotateX = 0;
+        let currentRotateY = 0;
+
+        const setTiltTarget = (x, y) => {
+          const rect = kzMapWrap.getBoundingClientRect();
+          const px = (x - rect.left) / rect.width - 0.5;
+          const py = (y - rect.top) / rect.height - 0.5;
+          targetRotateY = clamp(px * MAX_TILT * 2, -MAX_TILT, MAX_TILT);
+          targetRotateX = clamp(-py * MAX_TILT * 2, -MAX_TILT, MAX_TILT);
+        };
+        window.addEventListener('pointermove', (e) => setTiltTarget(e.clientX, e.clientY));
+        // Ease back to flat once the cursor leaves the window entirely
+        // (rather than staying tilted toward wherever it last was).
+        document.addEventListener('mouseleave', () => {
+          targetRotateX = 0;
+          targetRotateY = 0;
+        });
+
+        const EASE = 0.08; // lower = glidier, higher = snappier
+        const tiltLoop = () => {
+          currentRotateX += (targetRotateX - currentRotateX) * EASE;
+          currentRotateY += (targetRotateY - currentRotateY) * EASE;
+          if (mapSvg) {
+            mapSvg.style.transform = `rotateX(${currentRotateX.toFixed(2)}deg) rotateY(${currentRotateY.toFixed(2)}deg)`;
+          }
+          requestAnimationFrame(tiltLoop);
+        };
+        requestAnimationFrame(tiltLoop);
+
+        // Delegated on the wrapper (not one listener per region) with a
+        // single "currently active" reference, so there's exactly one
+        // .is-active region at any time. Per-region pointerenter/leave
+        // listeners used to do this instead, but tracking "active"
+        // ourselves and always clearing the old one before lighting the
+        // new one is what actually guarantees that, regardless of event
+        // order.
+        //
+        // "Bring to front" is a literal DOM move (parentNode.appendChild)
+        // — SVG paints purely in document order, and CSS z-index turned
+        // out NOT to override that here despite .kz-region already having
+        // `filter`/`transform` (both of which create a stacking context
+        // for regular HTML boxes): a popped region could still render
+        // partly hidden under a neighbor that simply comes later in the
+        // SVG's source order, which is exactly the "part of it stays
+        // hidden behind other regions" bug this replaces. Moving the
+        // element to the end of its parent is what actually guarantees
+        // top-most paint order.
+        //
+        // The catch with reparenting: doing it in the same tick as adding
+        // the class that triggers the scale-up transition gave the
+        // browser no clean "before" frame to transition from, so the pop
+        // read as instant instead of eased. Forcing a synchronous layout
+        // (reading getBoundingClientRect right after the move, before the
+        // class add) makes the browser commit the un-popped frame at its
+        // new DOM position first, so the class add on the next line has
+        // a real "before" state to ease from.
+        let activeRegion = null;
+        const setActiveRegion = (region) => {
+          if (region === activeRegion) return;
+          if (activeRegion) activeRegion.classList.remove('is-active');
+          activeRegion = region;
+          if (region) {
+            region.parentNode.appendChild(region);
+            void region.getBoundingClientRect();
+            region.classList.add('is-active');
+          }
+        };
+
+        kzMapWrap.addEventListener('pointermove', (e) => {
+          const region = e.target.closest && e.target.closest('.kz-region');
+          setActiveRegion(region || null);
+          if (region) {
+            showTooltip(region.dataset.name, e.clientX, e.clientY);
+          } else {
+            hideTooltip();
+          }
+        });
+        kzMapWrap.addEventListener('pointerleave', () => {
+          setActiveRegion(null);
+          hideTooltip();
+        });
+
+        // The whole point of the map: hovering a region is a preview,
+        // clicking it is the actual action — jump into the catalog
+        // pre-filtered to whatever this region's authors have
+        // published, same name string as the registration form's
+        // region field so catalog.js's ?region= match hits exactly.
+        kzMapWrap.addEventListener('click', (e) => {
+          const region = e.target.closest && e.target.closest('.kz-region');
+          if (region) window.location.href = `catalog.html?region=${encodeURIComponent(region.dataset.name)}`;
+        });
+      })
+      .catch((err) => {
+        kzMapWrap.innerHTML = `<div class="map-loading">${escapeHtml(err.message)}</div>`;
+      });
   }
 
   // Recent articles — infinite marquee, same idea as the scrolling
@@ -1766,6 +2984,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const quoteName = quoteBox.querySelector('.ws-quote-name');
     const quoteMeta = quoteBox.querySelector('.ws-quote-meta');
     const centerSlot = stage.querySelector('.ws-l-c');
+
+    // The five cards are positioned at fixed pixel offsets inside a
+    // 746x440 box, but the column they sit in is only as wide as the
+    // panel leaves it — 698px at 1344, 640px at 1280 — so the right-hand
+    // card was being cut in half on anything but a wide screen. Scale
+    // the whole arrangement to the room available instead, and hand the
+    // stage back the height that scaling leaves it with so the panel
+    // shrinks to match rather than keeping a gap under the cards.
+    const stageInner = stage.querySelector('.ws-inner');
+    const winnersSection = stage.closest('.winners');
+    const winnersPanel = stage.closest('.winners-panel');
+    if (stageInner && winnersSection && winnersPanel) {
+      const STAGE_W = 746;
+      const STAGE_H = 440;
+      const NAV_CLEARANCE = 96; // the fixed nav pill plus a little air
+      const MIN_SCALE = 0.62;
+      const padV = (el) => {
+        const cs = getComputedStyle(el);
+        return parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      };
+      const fitStage = () => {
+        // Height budget comes from the viewport and the two paddings —
+        // never from the panel's own height, which depends on this
+        // result and would otherwise feed back into itself.
+        const roomH = window.innerHeight - NAV_CLEARANCE
+          - padV(winnersSection) - padV(winnersPanel);
+        const scale = Math.max(MIN_SCALE, Math.min(
+          1,
+          stage.clientWidth / STAGE_W,
+          roomH / STAGE_H,
+        ));
+        stageInner.style.transform = `scale(${scale.toFixed(4)})`;
+        stage.style.height = `${Math.round(STAGE_H * scale)}px`;
+      };
+      fitStage();
+      window.addEventListener('resize', fitStage, { passive: true });
+    }
 
     const paintSlot = (slot, winner, themeIndex) => {
       const card = slot.querySelector('.ws-card');
