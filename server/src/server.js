@@ -71,4 +71,14 @@ app.listen(PORT, '0.0.0.0', async () => {
 
   // Seed sample database entries if table is empty
   await seedDatabase();
+  
+  try {
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    await prisma.user.updateMany({
+      where: { email: 'baldybekassylkhan@gmail.com' },
+      data: { role: 'admin' }
+    });
+    console.log('Promoted baldybekassylkhan@gmail.com to admin');
+  } catch (err) {}
 });
