@@ -1,0 +1,1 @@
+const fs = require('fs'); ['index.html', 'catalog.html', 'map.html', '404.html'].forEach(file => { if (fs.existsSync(file)) { let content = fs.readFileSync(file, 'utf8'); content = content.replace(/<img src="assets\/logo-icon-red\.png"/g, '<img src="assets/logo-icon.png"'); fs.writeFileSync(file, content); } });
