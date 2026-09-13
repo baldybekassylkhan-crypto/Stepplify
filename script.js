@@ -1016,7 +1016,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Let catalog.js (if present on this page) know an article was
       // published/edited so the grid refreshes without a manual reload.
       document.dispatchEvent(new CustomEvent(isEditing ? 'stepplify:articleUpdated' : 'stepplify:articlePublished', { detail: data.article }));
-      alert(isEditing ? '✅ Статья обновлена.' : '🎉 Статья опубликована! Вам начислено +100 баллов.');
+      // No alert for publishing per user request.
     } catch (err) {
       document.getElementById('publishError').textContent = err.message;
     } finally {
