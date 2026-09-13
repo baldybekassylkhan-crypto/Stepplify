@@ -1,0 +1,1 @@
+const fs = require('fs'); let css = fs.readFileSync('styles.css', 'utf8'); css += '\n/* Translate Fix */\n.brand-name { font-size: 0 !important; }\n.brand-name::after { content: "Stepplify"; font-size: 21px; }\n'; fs.writeFileSync('styles.css', css);
