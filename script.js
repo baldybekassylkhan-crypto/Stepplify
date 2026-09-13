@@ -2085,6 +2085,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const profileAvatarInput = document.getElementById('profileAvatarInput');
   const profileName        = document.getElementById('profileName');
   const profileLevelBadge  = document.getElementById('profileLevelBadge');
+  const profileRoleBadge  = document.getElementById('profileRoleBadge');
   const profileSchool      = document.getElementById('profileSchool');
   const profileGrade       = document.getElementById('profileGrade');
   const profileRegion      = document.getElementById('profileRegion');
@@ -2295,6 +2296,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('stepplify_user', JSON.stringify(data.user));
         updateNavFromStorage();
         profileLevelBadge.textContent = levelTitle(data.user.level);
+        if(data.user.role === 'admin' || data.user.role === 'moderator') { profileRoleBadge.style.display = 'inline-block'; profileRoleBadge.textContent = data.user.role; } else { profileRoleBadge.style.display = 'none'; }
         profileBaseline = { fullName: data.user.fullName, school: data.user.school, grade: data.user.grade, region: data.user.region };
         profileSaveHint.textContent = 'Сохранено ✓';
         profileSaveHint.className = 'profile-save-hint is-success';
@@ -2541,6 +2543,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAvatarInto(profileAvatarEl, cachedUser);
       profileName.value = cachedUser.fullName || '';
       profileLevelBadge.textContent = levelTitle(cachedUser.level || 1);
+      if(cachedUser.role === 'admin' || cachedUser.role === 'moderator') { profileRoleBadge.style.display = 'inline-block'; profileRoleBadge.textContent = cachedUser.role; } else { profileRoleBadge.style.display = 'none'; }
       profileSchool.value = cachedUser.school || '';
       profileGrade.value = cachedUser.grade || '';
       setSelectValuePreservingUnknown(profileRegion, cachedUser.region);
@@ -2572,6 +2575,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAvatarInto(profileAvatarEl, data);
         profileName.value = data.fullName;
         profileLevelBadge.textContent = levelTitle(data.level);
+        if(data.role === 'admin' || data.role === 'moderator') { profileRoleBadge.style.display = 'inline-block'; profileRoleBadge.textContent = data.role; } else { profileRoleBadge.style.display = 'none'; }
         profileSchool.value = data.school;
         profileGrade.value = data.grade;
         setSelectValuePreservingUnknown(profileRegion, data.region);
