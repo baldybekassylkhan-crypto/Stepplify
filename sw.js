@@ -1,4 +1,4 @@
-const CACHE_NAME = 'stepplify-offline-v1';
+const CACHE_NAME = 'stepplify-offline-v2';
 const OFFLINE_URL = '/404.html?mode=offline';
 
 const PRECACHE_ASSETS = [
