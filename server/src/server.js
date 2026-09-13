@@ -62,7 +62,7 @@ app.use((req, res) => {
 });
 
 // Start server and seed database
-app.listen(PORT, async () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`=======================================================`);
   console.log(`🚀 Stepplify Backend Server running on port ${PORT}`);
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
