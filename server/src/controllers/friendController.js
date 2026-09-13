@@ -209,3 +209,72 @@ export const listFriends = async (req, res) => {
     return res.status(500).json({ error: 'Ошибка при получении списка друзей.' });
   }
 };
+
+// 6. GetPublicUserProfile — full public profile for any user
+export const getPublicUserProfile = async (req, res) => {
+  try {
+    const targetUserId = parseInt(req.params.id);
+    if (isNaN(targetUserId)) {
+      return res.status(400).json({ error: 'Некорректный ID пользователя.' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: {
+        id: true,
+        fullName: true,
+        avatarUrl: true,
+        region: true,
+        district: true,
+        school: true,
+        grade: true,
+        role: true,
+        points: true,
+        level: true,
+        createdAt: true,
+        articles: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            title: true,
+            category: true,
+            viewsCount: true,
+            createdAt: true,
+            locationName: true,
+            images: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден.' });
+    }
+
+    const currentUserId = req.user ? (req.user.id || req.user.userId) : null;
+    let friendStatus = 'none';
+    let friendshipId = null;
+
+    if (currentUserId) {
+      const resStatus = await friendStatusBetween(currentUserId, targetUserId);
+      friendStatus = resStatus.status;
+      friendshipId = resStatus.friendshipId;
+    }
+
+    const formattedArticles = user.articles.map(article => ({
+      ...article,
+      images: JSON.parse(article.images || '[]'),
+    }));
+
+    return res.json({
+      ...user,
+      articles: formattedArticles,
+      articlesCount: formattedArticles.length,
+      friendStatus,
+      friendshipId,
+    });
+  } catch (error) {
+    console.error('Error in GetPublicUserProfile:', error);
+    return res.status(500).json({ error: 'Ошибка при получении профиля пользователя.' });
+  }
+};

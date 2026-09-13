@@ -17,6 +17,7 @@ model User {
   district     String
   school       String
   grade        String
+  role         String     @default("user")
   points       Int        @default(0)
   level        Int        @default(1)
   createdAt    DateTime   @default(now())
@@ -25,9 +26,12 @@ model User {
   articles     Article[]
   pointLogs    PointLog[]
   ratings      Rating[]
+  favorites    Favorite[]
+  reviewReplies ReviewReply[]
 
   sentFriendRequests     Friendship[] @relation("FriendRequester")
   receivedFriendRequests Friendship[] @relation("FriendAddressee")
+  reports                Report[]
 }
 
 // One row per requester->addressee pair, not per friendship — a
@@ -50,41 +54,60 @@ model Friendship {
 }
 
 model Article {
-  id           Int      @id @default(autoincrement())
+  id           Int        @id @default(autoincrement())
   title        String
   content      String
   category     String
-  // Which of the 17 regions (+ 3 cities) the article is ABOUT — set by
-  // the author at publish time, independent of their own home region
-  // (User.region). Optional in the DB so existing rows created before
-  // this field survive; the controller enforces it as required for new
-  // articles, same way it already does for category. Nullable reads
-  // fall back to the author's own region (see articleController.js).
   region       String?
-  images       String   @default("[]")
+  images       String     @default("[]")
   geoLat       Float?
   geoLng       Float?
   locationName String?
-  viewsCount   Int      @default(0)
-  authorId     Int
-  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  viewsCount        Int        @default(0)
+  verificationScore Int?
+  authorId          Int
+  author       User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
   ratings      Rating[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  favorites    Favorite[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  articleId Int
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, articleId])
 }
 
 model Rating {
-  id        Int      @id @default(autoincrement())
+  id        Int           @id @default(autoincrement())
   value     Int
   text      String?
   articleId Int
-  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  article   Article       @relation(fields: [articleId], references: [id], onDelete: Cascade)
   userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  replies   ReviewReply[]
 
   @@unique([articleId, userId])
+}
+
+model ReviewReply {
+  id        Int      @id @default(autoincrement())
+  ratingId  Int
+  rating    Rating   @relation(fields: [ratingId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PointLog {
@@ -105,3 +128,16 @@ model Winner {
   quote       String
   createdAt   DateTime @default(now())
 }
+
+model Report {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason      String
+  status      String   @default("pending") // pending | resolved | dismissed
+  targetType  String   // "article" | "review" | "reply"
+  targetId    Int      // ID of the reported entity
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+

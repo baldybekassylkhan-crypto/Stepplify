@@ -4,7 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Каталог статей — Stepplify</title>
-<link rel="stylesheet" href="styles.css?v=1786450899" />
+<link rel="stylesheet" href="styles.css?v=1789302416340" />
+  <script>
+    if (localStorage.getItem('stepplify_lang') && localStorage.getItem('stepplify_lang') !== 'rus') {
+      document.documentElement.style.opacity = '0';
+      document.documentElement.style.transition = 'opacity 0.2s ease';
+    }
+  </script>
 </head>
 <body class="catalog-page">
 
@@ -45,7 +51,7 @@
       </button>
       <a href="#" class="logout-link" id="logoutLink">Выйти</a>
     </div>
-    <div class="lang-toggle">
+    <div class="lang-toggle notranslate">
       <button type="button" id="langBtn">eng</button>
       <div class="lang-menu" id="langMenu">
         <button type="button" data-lang="eng">eng</button>
@@ -98,14 +104,15 @@
              data-value, no hidden <select> needed. -->
         <div class="catalog-select" id="catalogSortSelect">
           <button type="button" class="catalog-select-btn" id="catalogSortBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="catalogSortLabel">
-            <span id="catalogSortValue">Сначала новые</span>
+            <span id="catalogSortValue">Рядом со мной</span>
             <svg class="catalog-select-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path d="M4 6.5l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
           <ul class="catalog-select-menu" id="catalogSortMenu" role="listbox" tabindex="-1">
-            <li role="option" data-value="recommended">🎯 Рекомендуем для вас</li>
-            <li role="option" class="is-selected" data-value="new">Сначала новые</li>
+            <li role="option" class="is-selected" data-value="nearby">Рядом со мной</li>
+            <li role="option" data-value="recommended">Рекомендуем для вас</li>
+            <li role="option" data-value="new">Сначала новые</li>
             <li role="option" data-value="popular">По популярности</li>
             <li role="option" data-value="az">По алфавиту (А–Я)</li>
           </ul>
@@ -117,8 +124,8 @@
   </aside>
 </div>
 
-<script src="script.js?v=1786450899"></script>
-<script src="catalog.js?v=1786450899"></script>
+<script src="script.js?v=1789299393831"></script>
+<script src="catalog.js?v=1789285651763"></script>
 
 <!-- ============ Auth Modal ============ -->
 <div class="auth-overlay" id="authOverlay" aria-hidden="true">
@@ -270,10 +277,12 @@
 
     <div class="profile-tabs">
       <button type="button" class="profile-tab active" id="profileTabInfo" data-tab="info">Профиль</button>
+      <button type="button" class="profile-tab" id="profileTabFavorites" data-tab="favorites">Избранное</button>
       <button type="button" class="profile-tab" id="profileTabFriends" data-tab="friends">
         Друзья
         <span class="profile-tab-badge" id="profileFriendsBadge" hidden>0</span>
       </button>
+      <button type="button" class="profile-tab" id="profileTabSupport" data-tab="support">Поддержка</button>
     </div>
 
     <!-- ===== "Профиль" tab: avatar + editable fields + own articles ===== -->
@@ -371,6 +380,62 @@
         <div id="friendsList" class="friends-list">
           <div class="top10-loading">Загружаем друзей...</div>
         </div>
+      </div>
+    </div>
+
+    <!-- ===== "Избранное" tab ===== -->
+    <div class="profile-panel" id="profilePanelFavorites" hidden>
+      <div class="profile-articles">
+        <h3 class="profile-articles-title">Избранные статьи <span class="profile-articles-count" id="profileFavoritesCount">0</span></h3>
+        <div id="profileFavoritesList" class="profile-articles-list">
+          <div class="top10-loading">Загружаем избранное...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== "Поддержка" tab ===== -->
+    <div class="profile-panel" id="profilePanelSupport" hidden>
+      <div class="support-container">
+        <div class="support-header">
+          <h3 class="support-title">Служба поддержки Stepplify</h3>
+          <p class="support-desc">Есть вопрос или нужна помощь? Свяжитесь с нами удобным способом или отправьте сообщение ниже.</p>
+        </div>
+
+        <div class="support-contacts">
+          <a href="https://t.me/stepplify_bot" target="_blank" rel="noopener" class="support-contact-card">
+            <div class="support-contact-icon">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .54-1.43.53-.47-.01-1.37-.26-2.04-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.75 4-.174 6.68-2.88 8.04-3.44 3.82-1.58 4.61-1.85 5.13-1.86.11 0 .37.03.54.17.14.12.18.28.2.45-.01.07.01.24 0 .37z"/>
+              </svg>
+            </div>
+            <div class="support-contact-info">
+              <span class="support-contact-label">Telegram Бот Поддержки</span>
+              <span class="support-contact-val">@stepplify_bot</span>
+            </div>
+          </a>
+        </div>
+
+        <form class="support-form" id="profileSupportForm">
+          <div class="profile-field">
+            <label>Категория обращения</label>
+            <div class="support-category-selector">
+              <button type="button" class="support-cat-btn active" data-value="Вопрос">Вопрос</button>
+              <button type="button" class="support-cat-btn" data-value="Жалоба">Жалоба</button>
+              <button type="button" class="support-cat-btn" data-value="Пожелание">Пожелание</option>
+            </div>
+            <input type="hidden" id="supportSubject" value="Вопрос" />
+          </div>
+
+          <div class="profile-field">
+            <label for="supportMessage">Сообщение</label>
+            <textarea id="supportMessage" rows="3" placeholder="Опишите ваш вопрос или предложение..." required></textarea>
+          </div>
+
+          <div class="profile-save-row">
+            <span class="profile-save-hint" id="supportSendHint"></span>
+            <button type="submit" class="auth-submit profile-save-btn" id="supportSendBtn">Отправить сообщение</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

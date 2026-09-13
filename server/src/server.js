@@ -52,6 +52,15 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// 404 Fallback handlers
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ error: 'Маршрут API не найден.' });
+});
+
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(frontendPath, '404.html'));
+});
+
 // Start server and seed database
 app.listen(PORT, async () => {
   console.log(`=======================================================`);

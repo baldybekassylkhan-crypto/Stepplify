@@ -57,6 +57,7 @@ export const registerUser = async (req, res) => {
         district: true,
         school: true,
         grade: true,
+        role: true,
         points: true,
         level: true,
         createdAt: true,
@@ -64,7 +65,7 @@ export const registerUser = async (req, res) => {
     });
 
     const token = jwt.sign(
-      { id: newUser.id, email: newUser.email },
+      { id: newUser.id, email: newUser.email, role: newUser.role },
       process.env.JWT_SECRET || 'stepplify_secret_jwt_key_2026',
       { expiresIn: '7d' }
     );
@@ -100,7 +101,7 @@ export const loginUser = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'stepplify_secret_jwt_key_2026',
       { expiresIn: '7d' }
     );
@@ -134,6 +135,7 @@ export const getUserProfile = async (req, res) => {
         district: true,
         school: true,
         grade: true,
+        role: true,
         points: true,
         level: true,
         createdAt: true,
@@ -204,6 +206,7 @@ export const updateProfile = async (req, res) => {
         district: true,
         school: true,
         grade: true,
+        role: true,
         points: true,
         level: true,
         createdAt: true,
@@ -266,5 +269,31 @@ export const updateAvatar = async (req, res) => {
       return res.status(400).json({ error: 'Не удалось обработать изображение — попробуйте другой файл.' });
     }
     return res.status(500).json({ error: 'Ошибка при обновлении аватара.' });
+  }
+};
+export const updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+    
+    // Verify requester is a moderator
+    if (req.user.role !== 'moderator') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    if (!['user', 'moderator'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: parseInt(id, 10) },
+      data: { role },
+      select: { id: true, email: true, fullName: true, role: true }
+    });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Update role error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };

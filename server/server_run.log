@@ -1,0 +1,6 @@
+=======================================================
+🚀 Stepplify Backend Server running on port 5000
+🔗 API Base URL: http://localhost:5000/api
+📁 File Uploads URL: http://localhost:5000/uploads
+=======================================================
+Database already contains records. Skipping initial seeding.

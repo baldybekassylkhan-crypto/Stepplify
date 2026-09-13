@@ -8,6 +8,66 @@ document.addEventListener('DOMContentLoaded', () => {
   const langMenu = document.getElementById('langMenu');
 
   if (langBtn && langMenu) {
+    // Inject Google Translate
+    const gtDiv = document.createElement('div');
+    gtDiv.id = 'google_translate_element';
+    gtDiv.style.display = 'none';
+    document.body.appendChild(gtDiv);
+
+    window.googleTranslateElementInit = function() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'ru',
+        includedLanguages: 'ru,en,kk',
+        autoDisplay: false
+      }, 'google_translate_element');
+    };
+
+    const gtScript = document.createElement('script');
+    gtScript.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    document.body.appendChild(gtScript);
+
+    const langMap = { eng: 'en', kaz: 'kk', rus: 'ru' };
+
+    // Restore selected language from localStorage
+    const savedLang = localStorage.getItem('stepplify_lang') || 'rus';
+    langBtn.textContent = savedLang;
+    
+    // Attempt to apply translation on load
+    const applyTranslation = (langCode) => {
+      if (langCode === 'rus') {
+        document.documentElement.style.opacity = '1';
+        // When returning to rus, reload might be needed to clear GT changes cleanly,
+        // but since Google Translate widget restores to original when 'ru' is selected (pageLang)
+        // it will be fine. Just in case, if they want instant switch:
+      }
+
+      const select = document.querySelector('.goog-te-combo');
+      if (select) {
+        select.value = langMap[langCode];
+        select.dispatchEvent(new Event('change'));
+
+        if (langCode !== 'rus') {
+          const checkTranslated = () => {
+            if (document.documentElement.classList.contains('translated-ltr') || document.documentElement.classList.contains('translated-rtl')) {
+              document.documentElement.style.opacity = '1';
+            } else {
+              setTimeout(checkTranslated, 50);
+            }
+          };
+          setTimeout(checkTranslated, 50);
+          // Fallback to show page after 1.5s anyway
+          setTimeout(() => { document.documentElement.style.opacity = '1'; }, 1500);
+        }
+      } else {
+        setTimeout(() => applyTranslation(langCode), 200);
+      }
+    };
+    if (savedLang !== 'rus') {
+      applyTranslation(savedLang);
+    } else {
+      document.documentElement.style.opacity = '1';
+    }
+
     langBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       langMenu.classList.toggle('open');
@@ -15,8 +75,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     langMenu.querySelectorAll('button').forEach((btn) => {
       btn.addEventListener('click', () => {
-        langBtn.textContent = btn.dataset.lang;
+        const langCode = btn.dataset.lang;
+        langBtn.textContent = langCode;
+        localStorage.setItem('stepplify_lang', langCode);
         langMenu.classList.remove('open');
+        applyTranslation(langCode);
       });
     });
 
@@ -481,7 +544,54 @@ document.addEventListener('DOMContentLoaded', () => {
       userNav.style.display    = 'flex';
       userNavName.textContent  = user.fullName.split(' ')[0]; // first name only
       renderAvatarInto(userNavAvatar, user);
-      userNavPoints.textContent = `⭐ ${user.points} баллов`;
+      userNavPoints.textContent = `⭐ ${user.points} б`;
+
+      let adminLink = document.getElementById('adminReportsLink');
+      if (user.role === 'moderator' || user.role === 'admin') {
+        if (!adminLink) {
+          adminLink = document.createElement('a');
+          adminLink.id = 'adminReportsLink';
+          adminLink.href = '#';
+          adminLink.className = 'logout-link';
+          adminLink.innerHTML = 'Жалобы <span id="adminReportsBadge" style="display:none; background:#ef4444; color:#fff; font-size:0.7rem; padding:2px 6px; border-radius:999px; margin-left:4px;"></span>';
+          adminLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.openAdminReportsModal();
+          });
+          document.getElementById('logoutLink').parentNode.insertBefore(adminLink, document.getElementById('logoutLink'));
+        }
+        
+        fetch(`${API_URL}/reports/count`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          const badge = document.getElementById('adminReportsBadge');
+          if (badge && data && data.count > 0) {
+            badge.style.display = 'inline-block';
+            badge.textContent = data.count > 99 ? '99+' : data.count;
+          } else if (badge) {
+            badge.style.display = 'none';
+          }
+        })
+        .catch(() => {});
+        
+      } else if (adminLink) {
+        adminLink.remove();
+      }
+
+      // Background sync profile (to update cached user role/points if changed in DB)
+      fetch(`${API_URL}/users/profile`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(r => r.ok ? r.json() : null)
+      .then(freshUser => {
+        if (freshUser) {
+          const merged = { ...user, ...freshUser };
+          localStorage.setItem('stepplify_user', JSON.stringify(merged));
+        }
+      })
+      .catch(() => {});
     } else {
       signInLink.style.display = '';
       userNav.style.display    = 'none';
@@ -664,7 +774,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('stepplify_token');
     if (!token) return;
     editingArticleId = article.id;
-    if (publishTitleEl) publishTitleEl.textContent = '✏️ Редактировать статью';
+    if (publishTitleEl) publishTitleEl.textContent = 'Редактировать статью';
     if (publishSubmitBtn) publishSubmitBtn.textContent = 'Сохранить изменения';
     if (artImagesLabel) artImagesLabel.textContent = 'Фотографии (оставьте пустым, чтобы сохранить текущие)';
 
@@ -886,7 +996,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (track && freshArticles.length) {
           const renderCard = (a) => `
             <article class="article-card" data-id="${a.id}">
-              <span class="tag ${a.tagClass}">${a.tag}</span>
               <h3>${a.title}</h3>
               <div class="article-author">${a.author}</div>
               <div class="article-meta">
@@ -1037,21 +1146,309 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  const renderAvatarElement = (avatarUrl, name, isSmall = false) => {
+    const cls = isSmall ? 'threads-avatar threads-avatar--sm' : 'threads-avatar';
+    if (avatarUrl) {
+      return `<div class="${cls}"><img src="${resolveAvatarUrl(avatarUrl)}" alt="" class="threads-avatar-img" /></div>`;
+    }
+    return `<div class="${cls}">${getInitials(name)}</div>`;
+  };
+
   const renderReviewsList = (reviews) => {
     const list = Array.isArray(reviews) ? reviews : [];
+    const token = localStorage.getItem('stepplify_token');
+    const currentUser = JSON.parse(localStorage.getItem('stepplify_user') || 'null');
+    const currentUserId = currentUser ? currentUser.id : null;
+    const isMod = currentUser && (currentUser.role === 'moderator' || currentUser.role === 'admin');
     return `
       <h3 class="article-reviews-title">Отзывы <span class="article-reviews-count">${list.length}</span></h3>
       ${list.length
-        ? list.map((rev) => `
-            <div class="article-review">
-              <div class="article-review-head">
-                <span class="article-review-author">${escapeHtml(rev.author)}</span>
-                ${renderStarRow(rev.value)}
-              </div>
-              <div class="article-review-meta">${escapeHtml(rev.meta)} · ${formatReviewDate(rev.createdAt)}</div>
-              <p class="article-review-text">${escapeHtml(rev.text)}</p>
-            </div>`).join('')
+        ? list.map((rev) => {
+            const replies = Array.isArray(rev.replies) ? rev.replies : [];
+            const hasReplies = replies.length > 0;
+            const isMyReview = currentUserId && rev.userId === currentUserId;
+            const canDeleteReview = isMyReview || isMod;
+            const repliesHtml = hasReplies
+              ? `<div class="threads-replies-wrapper" id="repliesWrapper-${rev.id}">
+                  <div class="threads-replies-inner">
+                    <div class="threads-replies-list">
+                      ${replies.map(rep => {
+                        const isMyReply = currentUserId && rep.userId === currentUserId;
+                        const canDeleteReply = isMyReply || isMod;
+                        return `
+                        <div class="threads-review threads-reply-item" data-reply-id="${rep.id}">
+                          <div class="threads-reply-curve"></div>
+                          <div class="threads-avatar-col clickable-profile" data-user-id="${rep.userId}">
+                            ${renderAvatarElement(rep.avatarUrl, rep.author, true)}
+                          </div>
+                          <div class="threads-content-col">
+                            <div class="threads-header">
+                              <span class="threads-author clickable-profile" data-user-id="${rep.userId}">${escapeHtml(rep.author)}</span>
+                              <span class="threads-meta">${escapeHtml(rep.meta)} · ${formatReviewDate(rep.createdAt)}</span>
+                            </div>
+                            <p class="threads-text">${escapeHtml(rep.text)}</p>
+                            <div class="threads-actions threads-owner-actions" style="display:flex; gap:8px;">
+                              ${isMyReply ? `<button type="button" class="threads-edit-btn threads-edit-reply-btn" data-reply-id="${rep.id}" data-review-id="${rev.id}" title="Редактировать">✎ Изменить</button>` : ''}
+                              ${canDeleteReply ? `<button type="button" class="threads-delete-btn threads-delete-reply-btn" data-reply-id="${rep.id}" data-review-id="${rev.id}" title="Удалить">✕ Удалить</button>` : ''}
+                              <button type="button" class="threads-delete-btn" onclick="window.openReportModal('reply', ${rep.id})" title="Пожаловаться" style="opacity:0.6;">Жалоба</button>
+                            </div>
+                            ${isMyReply ? `<div class="threads-edit-form" id="editReplyForm-${rep.id}" hidden>
+                              <textarea class="article-reply-textarea" id="editReplyText-${rep.id}" rows="2">${escapeHtml(rep.text)}</textarea>
+                              <div class="article-reply-actions">
+                                <button type="button" class="auth-submit threads-edit-reply-save" data-reply-id="${rep.id}" data-review-id="${rev.id}">Сохранить</button>
+                                <button type="button" class="article-reply-cancel threads-edit-reply-cancel" data-reply-id="${rep.id}">Отмена</button>
+                              </div>
+                            </div>` : ''}
+                          </div>
+                        </div>`;
+                      }).join('')}
+                    </div>
+                  </div>
+                </div>`
+              : '';
+
+            const replyForm = token ? `
+              <div class="article-review-reply-form" id="replyForm-${rev.id}" hidden>
+                <textarea class="article-reply-textarea" id="replyText-${rev.id}" rows="2" placeholder="Ответить пользователю ${escapeHtml(rev.author)}..."></textarea>
+                <div class="article-reply-actions">
+                  <button type="button" class="auth-submit article-reply-submit" data-review-id="${rev.id}">Отправить</button>
+                  <button type="button" class="article-reply-cancel" data-review-id="${rev.id}">Отмена</button>
+                </div>
+              </div>` : '';
+
+            const replyBtn = token ? `<button type="button" class="threads-reply-btn article-review-reply-btn" data-review-id="${rev.id}">Ответить</button>` : '';
+            const toggleRepliesBtn = hasReplies ? `<button type="button" class="threads-toggle-replies-btn article-review-toggle-replies-btn" data-review-id="${rev.id}" data-count="${replies.length}">Посмотреть ответы (${replies.length}) <span class="threads-chevron">▾</span></button>` : '';
+            const deleteReviewBtn = canDeleteReview ? `<button type="button" class="threads-delete-btn threads-delete-review-btn" data-review-id="${rev.id}" data-user-id="${rev.userId}" title="Удалить отзыв">✕ Удалить</button>` : '';
+            const reportReviewBtn = `<button type="button" class="threads-delete-btn" onclick="window.openReportModal('review', ${rev.id})" title="Пожаловаться" style="opacity:0.6;">Жалоба</button>`;
+
+            return `
+              <div class="threads-review" id="review-${rev.id}">
+                <div class="threads-avatar-col clickable-profile" data-user-id="${rev.userId}">
+                  ${renderAvatarElement(rev.avatarUrl, rev.author)}
+                  ${hasReplies ? '<div class="threads-line threads-line--has-replies"></div>' : ''}
+                </div>
+                <div class="threads-content-col">
+                  <div class="threads-header">
+                    <div class="threads-user-info">
+                      <span class="threads-author clickable-profile" data-user-id="${rev.userId}">${escapeHtml(rev.author)}</span>
+                      <span class="threads-meta">${escapeHtml(rev.meta)} · ${formatReviewDate(rev.createdAt)}</span>
+                    </div>
+                    ${renderStarRow(rev.value)}
+                  </div>
+                  <p class="threads-text">${escapeHtml(rev.text)}</p>
+                  <div class="threads-actions" style="display:flex; gap:8px;">
+                    ${replyBtn}
+                    ${toggleRepliesBtn}
+                    ${deleteReviewBtn}
+                    ${reportReviewBtn}
+                  </div>
+                  ${replyForm}
+                  ${repliesHtml}
+                </div>
+              </div>`;
+          }).join('')
         : '<p class="article-reviews-empty">Отзывов пока нет — станьте первым.</p>'}`;
+  };
+
+  const wireReviewReplyHandlers = (articleId) => {
+    const reviewsContainer = document.getElementById('articleReviews');
+    if (!reviewsContainer) return;
+
+    // Compute exact pixel height for each parent-to-replies vertical line
+    const fixThreadLineHeights = () => {
+      reviewsContainer.querySelectorAll('.threads-review:not(.threads-reply-item)').forEach(review => {
+        const avatarCol = review.querySelector(':scope > .threads-avatar-col');
+        if (!avatarCol) return;
+        const wrapper = review.querySelector('.threads-replies-wrapper.is-open');
+        if (!wrapper) {
+          avatarCol.style.removeProperty('--line-h');
+          return;
+        }
+        const lastReply = wrapper.querySelector('.threads-reply-item:last-child');
+        if (!lastReply) {
+          avatarCol.style.removeProperty('--line-h');
+          return;
+        }
+        const avatar = avatarCol.querySelector('.threads-avatar');
+        const curve = lastReply.querySelector('.threads-reply-curve');
+        if (!avatar || !curve) return;
+        const avatarBottom = avatar.getBoundingClientRect().bottom;
+        const curveRect = curve.getBoundingClientRect();
+        // Line should reach the vertical midpoint of the curve
+        const lineH = Math.max(0, curveRect.top + curveRect.height * 0.5 - avatarBottom);
+        avatarCol.style.setProperty('--line-h', lineH + 'px');
+      });
+    };
+
+    // Run once on render, and again after the CSS grid transition completes
+    requestAnimationFrame(fixThreadLineHeights);
+
+    reviewsContainer.querySelectorAll('.article-review-toggle-replies-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const revId = btn.dataset.reviewId;
+        const wrapper = document.getElementById(`repliesWrapper-${revId}`);
+        if (!wrapper) return;
+        const count = btn.dataset.count;
+        const isOpen = wrapper.classList.toggle('is-open');
+        btn.innerHTML = isOpen ? 'Скрыть ответы <span class="threads-chevron">▴</span>' : `Посмотреть ответы (${count}) <span class="threads-chevron">▾</span>`;
+        // Recalculate after transition
+        requestAnimationFrame(fixThreadLineHeights);
+        setTimeout(fixThreadLineHeights, 400);
+      });
+    });
+
+    reviewsContainer.querySelectorAll('.article-review-reply-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const revId = btn.dataset.reviewId;
+        const form = document.getElementById(`replyForm-${revId}`);
+        if (form) {
+          form.hidden = !form.hidden;
+          if (!form.hidden) {
+            const txt = document.getElementById(`replyText-${revId}`);
+            if (txt) txt.focus();
+          }
+        }
+      });
+    });
+
+    reviewsContainer.querySelectorAll('.article-reply-cancel').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const revId = btn.dataset.reviewId;
+        const form = document.getElementById(`replyForm-${revId}`);
+        if (form) form.hidden = true;
+      });
+    });
+
+    reviewsContainer.querySelectorAll('.article-reply-submit').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const revId = btn.dataset.reviewId;
+        const txtEl = document.getElementById(`replyText-${revId}`);
+        const text = txtEl ? txtEl.value.trim() : '';
+        const token = localStorage.getItem('stepplify_token');
+
+        if (!token || !text) return;
+        btn.disabled = true;
+        btn.textContent = 'Отправка...';
+
+        try {
+          const res = await fetch(`${API_URL}/articles/${articleId}/reviews/${revId}/reply`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ text }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Ошибка отправки ответа');
+          applyRatingResponse(articleId, data);
+        } catch (err) {
+          console.error('Reply submit failed:', err);
+          btn.disabled = false;
+          btn.textContent = 'Отправить ответ';
+        }
+      });
+    });
+  };
+  const wireReviewEditDeleteHandlers = (articleId) => {
+    const reviewsContainer = document.getElementById('articleReviews');
+    if (!reviewsContainer) return;
+    const token = localStorage.getItem('stepplify_token');
+    if (!token) return;
+
+    // Delete review (whole rating + text + all replies)
+    reviewsContainer.querySelectorAll('.threads-delete-review-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Удалить этот отзыв и все ответы к нему?')) return;
+        const targetUserId = btn.dataset.userId;
+        const query = targetUserId ? `?userId=${targetUserId}` : '';
+        btn.disabled = true;
+        btn.textContent = 'Удаляю...';
+        try {
+          const res = await fetch(`${API_URL}/articles/${articleId}/rate${query}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Ошибка удаления отзыва');
+          applyRatingResponse(articleId, data);
+        } catch (err) {
+          console.error('Delete review failed:', err);
+          btn.disabled = false;
+          btn.textContent = '✕ Удалить';
+        }
+      });
+    });
+
+    // Delete reply
+    reviewsContainer.querySelectorAll('.threads-delete-reply-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Удалить ваш комментарий?')) return;
+        const replyId = btn.dataset.replyId;
+        btn.disabled = true;
+        btn.textContent = 'Удаляю...';
+        try {
+          const res = await fetch(`${API_URL}/articles/${articleId}/replies/${replyId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Ошибка удаления ответа');
+          applyRatingResponse(articleId, data);
+        } catch (err) {
+          console.error('Delete reply failed:', err);
+          btn.disabled = false;
+          btn.textContent = '✕ Удалить';
+        }
+      });
+    });
+
+    // Toggle edit form for reply
+    reviewsContainer.querySelectorAll('.threads-edit-reply-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const replyId = btn.dataset.replyId;
+        const form = document.getElementById(`editReplyForm-${replyId}`);
+        if (form) {
+          form.hidden = !form.hidden;
+          if (!form.hidden) {
+            const txt = document.getElementById(`editReplyText-${replyId}`);
+            if (txt) txt.focus();
+          }
+        }
+      });
+    });
+
+    // Cancel edit reply
+    reviewsContainer.querySelectorAll('.threads-edit-reply-cancel').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const replyId = btn.dataset.replyId;
+        const form = document.getElementById(`editReplyForm-${replyId}`);
+        if (form) form.hidden = true;
+      });
+    });
+
+    // Save edited reply
+    reviewsContainer.querySelectorAll('.threads-edit-reply-save').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const replyId = btn.dataset.replyId;
+        const txtEl = document.getElementById(`editReplyText-${replyId}`);
+        const text = txtEl ? txtEl.value.trim() : '';
+        if (!text) return;
+        btn.disabled = true;
+        btn.textContent = 'Сохраняю...';
+        try {
+          const res = await fetch(`${API_URL}/articles/${articleId}/replies/${replyId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ text }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Ошибка редактирования ответа');
+          applyRatingResponse(articleId, data);
+        } catch (err) {
+          console.error('Edit reply failed:', err);
+          btn.disabled = false;
+          btn.textContent = 'Сохранить';
+        }
+      });
+    });
   };
 
   // Both the star row and the review compose box post to the same
@@ -1064,6 +1461,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (reviewsBox) reviewsBox.innerHTML = renderReviewsList(data.reviews);
     wireStarInteraction(articleId);
     wireReviewSubmit(articleId);
+    wireReviewReplyHandlers(articleId);
+    wireReviewEditDeleteHandlers(articleId);
   };
 
   const wireStarInteraction = (articleId) => {
@@ -1129,6 +1528,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  const renderFavoriteButtonContent = (isFav) => `
+    <svg class="fav-icon" width="16" height="16" viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+    </svg>
+    <span>${isFav ? 'В избранном' : 'В избранное'}</span>`;
+
   const renderArticleReader = (a) => {
     const images = Array.isArray(a.images) ? a.images : [];
     const gallery = images.length
@@ -1136,26 +1541,122 @@ document.addEventListener('DOMContentLoaded', () => {
       : '';
     const metaLine = [a.meta, a.region, a.locationName].filter(Boolean).join(' · ');
     const cachedUser = JSON.parse(localStorage.getItem('stepplify_user') || 'null');
-    const isOwner = !!cachedUser && cachedUser.id === a.authorId;
+    const isOwner = !!cachedUser && (cachedUser.id === a.authorId || cachedUser.role === 'moderator' || cachedUser.role === 'admin');
+    const isMod = !!cachedUser && (cachedUser.role === 'moderator' || cachedUser.role === 'admin');
+
     const ownerActions = isOwner
       ? `<div class="article-owner-actions">
-           <button type="button" class="article-owner-btn" id="articleEditBtn">✏️ Редактировать</button>
-           <button type="button" class="article-owner-btn article-owner-btn--danger" id="articleDeleteBtn">🗑 Удалить</button>
+           <button type="button" class="article-owner-btn" id="articleEditBtn">Редактировать</button>
+           <button type="button" class="article-owner-btn article-owner-btn--danger" id="articleDeleteBtn">Удалить</button>
          </div>`
       : '';
+    const favoriteBtn = `
+      <button type="button" class="article-favorite-btn ${a.isFavorite ? 'is-favorite' : ''}" id="articleFavoriteBtn">
+        ${renderFavoriteButtonContent(a.isFavorite)}
+      </button>`;
+
+    const locationQuery = (a.geoLat && a.geoLng)
+      ? `${a.geoLng},${a.geoLat}`
+      : (a.locationName || a.title);
+    const gisUrl = `https://2gis.kz/search/${encodeURIComponent(locationQuery)}`;
+
+    const gisBtn = `
+      <a href="${gisUrl}" target="_blank" rel="noopener noreferrer" class="article-2gis-btn" title="Открыть в 2GIS">
+        <img src="2gis.png" class="gis-icon-img" alt="2GIS" />
+        <span>2GIS</span>
+      </a>`;
+
+    const reportBtn = `
+      <button type="button" class="article-report-btn" onclick="window.openReportModal('article', ${a.id})" title="Пожаловаться">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+        Жалоба
+      </button>`;
+
+    const actionsRow = `<div class="article-actions-row" style="display:flex; gap:10px; flex-wrap:wrap;">${favoriteBtn}${gisBtn}${reportBtn}${ownerActions}</div>`;
+
+    const hasVerification = a.verificationScore !== null && a.verificationScore !== undefined;
+    const scoreVal = hasVerification ? a.verificationScore : 0;
+    const scoreText = hasVerification ? `${a.verificationScore}%` : '<span class="verification-unverified">Ещё не проверено модератором</span>';
+    
+    const verificationBadge = `
+      <div class="article-verification-badge" id="articleVerificationBadge">
+        <div class="verification-badge-header">
+          <span class="verification-badge-label">Проверка достоверности:</span>
+          <span class="verification-badge-value" id="verificationBadgeValue">${scoreText}</span>
+        </div>
+        <div class="verification-progress-track">
+          <div class="verification-progress-fill" id="verificationBadgeFill" style="width: ${hasVerification ? scoreVal : 0}%"></div>
+        </div>
+      </div>`;
+
+    const modVerificationBox = isMod
+      ? `<div class="article-verification-mod-box">
+           <div class="mod-box-header">
+             <span class="mod-box-title">Оценка достоверности статьи (Модератор)</span>
+             <span class="mod-box-val" id="verificationValDisplay">${scoreVal}%</span>
+           </div>
+           <div class="mod-box-controls">
+             <input type="range" min="0" max="100" value="${scoreVal}" id="verificationRangeInput" class="verification-range-slider" />
+             <button type="button" class="auth-submit verification-save-btn" id="saveVerificationBtn">Сохранить оценку</button>
+           </div>
+           <div class="verification-hint" id="verificationSaveHint"></div>
+         </div>`
+      : '';
+
     return `
       ${gallery}
-      <span class="tag ${categoryTagClass[a.category] || 'tag-essay'}">${escapeHtml(a.category)}</span>
       <h2 class="article-reader-title">${escapeHtml(a.title)}</h2>
       <div class="article-reader-byline">
-        <span class="article-reader-author">${escapeHtml(a.author)}</span>
+        <span class="article-reader-author clickable-profile" data-user-id="${a.authorId}">${escapeHtml(a.author)}</span>
         <span class="article-reader-meta">${escapeHtml(metaLine)}</span>
       </div>
-      ${ownerActions}
+      ${actionsRow}
+      ${verificationBadge}
+      ${modVerificationBox}
       <div class="article-reader-stats">👁 <span id="articleViewsValue">${escapeHtml(String(a.viewsFormatted ?? a.views ?? 0))}</span></div>
       <div class="article-reader-body">${escapeHtml(a.content).replace(/\n/g, '<br>')}</div>
       <div class="article-reader-rating" id="articleReaderRating">${renderRatingBlock(a.rating)}</div>
       <div class="article-reviews" id="articleReviews">${renderReviewsList(a.reviews)}</div>`;
+  };
+
+  const wireFavoriteAction = (articleId, data) => {
+    const favBtn = document.getElementById('articleFavoriteBtn');
+    if (!favBtn) return;
+
+    favBtn.addEventListener('click', async () => {
+      const token = localStorage.getItem('stepplify_token');
+      if (!token) {
+        const signInLink = document.getElementById('signInLink');
+        signInLink?.click();
+        return;
+      }
+
+      favBtn.disabled = true;
+      favBtn.classList.remove('animating');
+      // Trigger reflow to restart CSS animation if clicked rapidly
+      void favBtn.offsetWidth;
+      favBtn.classList.add('animating');
+
+      try {
+        const res = await fetch(`${API_URL}/articles/${articleId}/favorite`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        const resData = await res.json();
+        if (!res.ok) throw new Error(resData.error || 'Ошибка');
+
+        favBtn.classList.toggle('is-favorite', resData.isFavorite);
+        favBtn.innerHTML = renderFavoriteButtonContent(resData.isFavorite);
+        data.isFavorite = resData.isFavorite;
+
+        if (window.loadFavoritesData) window.loadFavoritesData();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        favBtn.disabled = false;
+        setTimeout(() => favBtn.classList.remove('animating'), 450);
+      }
+    });
   };
 
   // Wired only when renderArticleReader actually printed the buttons
@@ -1187,15 +1688,68 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (err) {
         alert(err.message);
         deleteBtn.disabled = false;
-        deleteBtn.textContent = '🗑 Удалить';
+        deleteBtn.textContent = 'Удалить';
       }
     });
   };
 
-  window.openArticleModal = async (id) => {
+  const wireVerificationAction = (articleId) => {
+    const rangeInput = document.getElementById('verificationRangeInput');
+    const valDisplay = document.getElementById('verificationValDisplay');
+    const saveBtn = document.getElementById('saveVerificationBtn');
+    const hint = document.getElementById('verificationSaveHint');
+    const badgeVal = document.getElementById('verificationBadgeValue');
+    const badgeFill = document.getElementById('verificationBadgeFill');
+
+    if (!rangeInput || !saveBtn) return;
+
+    rangeInput.addEventListener('input', () => {
+      if (valDisplay) valDisplay.textContent = `${rangeInput.value}%`;
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      const token = localStorage.getItem('stepplify_token');
+      if (!token) return;
+      const score = parseInt(rangeInput.value);
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Сохраняю...';
+      if (hint) hint.textContent = '';
+
+      try {
+        const res = await fetch(`${API_URL}/articles/${articleId}/verification`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ score })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Ошибка при сохранении');
+
+        if (hint) {
+          hint.style.color = '#4ade80';
+          hint.textContent = '✓ Оценка достоверности сохранена!';
+        }
+        if (badgeVal) badgeVal.textContent = `${score}%`;
+        if (badgeFill) badgeFill.style.width = `${score}%`;
+      } catch (err) {
+        console.error('Verification update failed:', err);
+        if (hint) {
+          hint.style.color = '#ef4444';
+          hint.textContent = err.message;
+        }
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Сохранить оценку';
+      }
+    });
+  };
+
+  window.openArticleModal = async (id, highlightType = null, highlightId = null) => {
     if (!articleOverlay || !articleReader || !id) return;
     articleOpenedAt = Date.now();
-    articleReader.innerHTML = '<div class="article-reader-loading">Загрузка статьи…</div>';
+    articleReader.innerHTML = '<div class="article-reader-loading">Загрузка статьи...</div>';
     articleOverlay.classList.add('open');
     articleOverlay.setAttribute('aria-hidden', 'false');
     if (articleModalEl) articleModalEl.scrollTop = 0;
@@ -1212,8 +1766,39 @@ document.addEventListener('DOMContentLoaded', () => {
       articleReader.innerHTML = renderArticleReader(data);
       wireStarInteraction(id);
       wireReviewSubmit(id);
+      wireReviewReplyHandlers(id);
+      wireReviewEditDeleteHandlers(id);
+      wireFavoriteAction(id, data);
       wireOwnerActions(id, data);
+      wireVerificationAction(id);
       recordArticleView(data);
+
+      if (highlightType && highlightId) {
+        setTimeout(() => {
+          let targetEl = null;
+          if (highlightType === 'review') {
+            targetEl = document.getElementById(`review-${highlightId}`);
+          } else if (highlightType === 'reply') {
+            targetEl = document.querySelector(`[data-reply-id="${highlightId}"]`);
+            if (targetEl) {
+              const wrapper = targetEl.closest('.threads-replies-wrapper');
+              if (wrapper && !wrapper.classList.contains('is-open')) {
+                const revId = wrapper.id.replace('repliesWrapper-', '');
+                const btn = document.querySelector(`.article-review-toggle-replies-btn[data-review-id="${revId}"]`);
+                if (btn) btn.click();
+              }
+            }
+          }
+
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetEl.classList.add('highlight-flash');
+            setTimeout(() => {
+              targetEl.classList.remove('highlight-flash');
+            }, 2000);
+          }
+        }, 300); // Allow modal animation to settle
+      }
 
       // One view per open, as requested — fire-and-forget, then
       // reconcile the shown count with the server's real number.
@@ -1278,6 +1863,215 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ============ Public Profile Modal ============
+  const renderPublicUserProfile = (container, u) => {
+    const metaLine = [u.school, u.grade ? `${u.grade} класс` : '', u.region].filter(Boolean).join(' · ');
+    const articles = Array.isArray(u.articles) ? u.articles : [];
+
+    let friendBtnHtml = '';
+    if (u.friendStatus === 'none') {
+      friendBtnHtml = `<button type="button" class="auth-submit pub-profile-friend-btn" data-action="add" data-user-id="${u.id}">➕ Добавить в друзья</button>`;
+    } else if (u.friendStatus === 'pending_outgoing') {
+      friendBtnHtml = `<button type="button" class="btn btn-secondary pub-profile-friend-btn" disabled>⏳ Заявка отправлена</button>`;
+    } else if (u.friendStatus === 'pending_incoming') {
+      friendBtnHtml = `<button type="button" class="auth-submit pub-profile-friend-btn" data-action="accept" data-friendship-id="${u.friendshipId}">✔ Принять заявку</button>`;
+    } else if (u.friendStatus === 'friends') {
+      friendBtnHtml = `<button type="button" class="btn btn-secondary pub-profile-friend-btn" data-action="remove" data-user-id="${u.id}">👥 В друзьях (Удалить)</button>`;
+    }
+
+    const articlesHtml = articles.length
+      ? articles.map(art => `
+          <div class="pub-profile-article-item" data-article-id="${art.id}">
+            <div class="pub-profile-article-info">
+              <span class="pub-profile-article-category">${escapeHtml(art.category)}</span>
+              <h4 class="pub-profile-article-title">${escapeHtml(art.title)}</h4>
+              <span class="pub-profile-article-meta">👁 ${art.viewsCount || 0} просмотров</span>
+            </div>
+          </div>
+        `).join('')
+      : '<p class="pub-profile-empty">У пользователя пока нет публикаций.</p>';
+
+    const modBadge = u.role === 'moderator' || u.role === 'admin'
+      ? '<span class="pub-profile-role-badge">Модератор</span>'
+      : '';
+
+    container.innerHTML = `
+      <div class="pub-profile-header">
+        <div class="pub-profile-avatar-wrap">
+          ${renderAvatarElement(u.avatarUrl, u.fullName)}
+        </div>
+        <h3 class="pub-profile-name">${escapeHtml(u.fullName)} ${modBadge}</h3>
+        <p class="pub-profile-meta">${escapeHtml(metaLine)}</p>
+        
+        <div class="pub-profile-stats">
+          <div class="pub-stat-card">
+            <span class="pub-stat-val">⭐ ${u.points || 0}</span>
+            <span class="pub-stat-lbl">Баллы</span>
+          </div>
+          <div class="pub-stat-card">
+            <span class="pub-stat-val">🏆 ${u.level || 1}</span>
+            <span class="pub-stat-lbl">Уровень</span>
+          </div>
+          <div class="pub-stat-card">
+            <span class="pub-stat-val">📝 ${u.articlesCount || 0}</span>
+            <span class="pub-stat-lbl">Статьи</span>
+          </div>
+        </div>
+
+        ${(() => {
+          let modActionHtml = '';
+          const loggedUserStr = localStorage.getItem('stepplify_user');
+          const loggedUser = loggedUserStr ? JSON.parse(loggedUserStr) : null;
+          
+          if (u.role === 'moderator' || u.role === 'admin') {
+            const canRevoke = loggedUser && (loggedUser.role === 'admin' || loggedUser.role === 'moderator') && loggedUser.id !== u.id;
+            modActionHtml = `<div style="text-align:center; padding:12px; border-radius:14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); font-weight:600; font-size:13px; display:flex; flex-direction:column; gap:8px;">
+              <div>Пользователь — модератор</div>
+              ${canRevoke ? `<button type="button" class="btn btn-secondary" style="padding:6px; font-size:12px; width:100%; box-shadow:none;" onclick="this.innerHTML='Загрузка...'; window.revokeModRights(${u.id})">Снять права</button>` : ''}
+            </div>`;
+          } else if (loggedUser && (loggedUser.role === 'moderator' || loggedUser.role === 'admin') && loggedUser.id !== u.id) {
+            modActionHtml = `<button type="button" class="btn btn-primary pub-profile-mod-btn" style="width:100%; box-shadow:none;" onclick="this.innerHTML='Загрузка...'; window.grantModRights(${u.id})">Выдать права модератора</button>`;
+          }
+          
+          if (friendBtnHtml || modActionHtml) {
+            return `<div class="pub-profile-actions" style="display:flex; flex-direction:column; gap:10px;">${friendBtnHtml}${modActionHtml}</div>`;
+          }
+          return '';
+        })()}
+      </div>
+
+      <div class="pub-profile-articles-section">
+        <h4 class="pub-profile-section-title">Публикации автора (${articles.length})</h4>
+        <div class="pub-profile-articles-list">
+          ${articlesHtml}
+        </div>
+      </div>
+    `;
+
+    // Wire friend button actions
+    const friendBtn = container.querySelector('.pub-profile-friend-btn');
+    if (friendBtn) {
+      friendBtn.addEventListener('click', async () => {
+        const token = localStorage.getItem('stepplify_token');
+        if (!token) {
+          document.getElementById('signInLink')?.click();
+          return;
+        }
+        const action = friendBtn.dataset.action;
+        friendBtn.disabled = true;
+
+        try {
+          if (action === 'add') {
+            const res = await fetch(`${API_URL}/friends/request/${u.id}`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Ошибка');
+            friendBtn.textContent = '⏳ Заявка отправлена';
+            friendBtn.className = 'btn btn-secondary pub-profile-friend-btn';
+            friendBtn.dataset.action = '';
+          } else if (action === 'accept') {
+            const res = await fetch(`${API_URL}/friends/${friendBtn.dataset.friendshipId}/respond`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ action: 'accept' })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Ошибка');
+            friendBtn.textContent = '👥 В друзьях';
+            friendBtn.className = 'btn btn-secondary pub-profile-friend-btn';
+          } else if (action === 'remove') {
+            if (!confirm('Удалить из друзей?')) return;
+            const res = await fetch(`${API_URL}/friends/${u.id}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Ошибка');
+            friendBtn.textContent = '➕ Добавить в друзья';
+            friendBtn.className = 'auth-submit pub-profile-friend-btn';
+            friendBtn.dataset.action = 'add';
+          }
+        } catch (err) {
+          alert(err.message);
+        } finally {
+          friendBtn.disabled = false;
+        }
+      });
+    }
+
+    // Wire clicking on an article item to open it
+    container.querySelectorAll('.pub-profile-article-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const artId = item.dataset.articleId;
+        document.getElementById('publicProfileOverlay')?.classList.remove('open');
+        window.openArticleModal?.(artId);
+      });
+    });
+  };
+
+  window.openPublicProfileModal = async (userId) => {
+    if (!userId) return;
+
+    let overlay = document.getElementById('publicProfileOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'publicProfileOverlay';
+      overlay.className = 'auth-overlay';
+      overlay.innerHTML = `
+        <div class="auth-modal profile-modal public-profile-modal" role="dialog">
+          <button type="button" class="auth-close" id="publicProfileClose">&times;</button>
+          <div id="publicProfileContent">
+            <div class="article-reader-loading">Загружаем профиль...</div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('#publicProfileClose').addEventListener('click', () => {
+        overlay.classList.remove('open');
+        overlay.setAttribute('aria-hidden', 'true');
+      });
+
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('open');
+          overlay.setAttribute('aria-hidden', 'true');
+        }
+      });
+    }
+
+    const contentEl = overlay.querySelector('#publicProfileContent');
+    contentEl.innerHTML = '<div class="article-reader-loading">Загружаем профиль...</div>';
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+
+    const token = localStorage.getItem('stepplify_token');
+    try {
+      const res = await fetch(`${API_URL}/users/by-id/${userId}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const u = await res.json();
+      if (!res.ok) throw new Error(u.error || 'Не удалось загрузить профиль.');
+
+      renderPublicUserProfile(contentEl, u);
+    } catch (err) {
+      contentEl.innerHTML = `<div class="article-reader-loading" style="color: #ef4444;">${escapeHtml(err.message)}</div>`;
+    }
+  };
+
+  // Document click delegation for opening public profiles
+  document.addEventListener('click', (e) => {
+    const trigger = e.target.closest('.clickable-profile');
+    if (trigger) {
+      const userId = trigger.dataset.userId;
+      if (userId) {
+        window.openPublicProfileModal?.(userId);
+      }
+    }
+  });
+
   // ============ Profile Modal ============
   // Opened from the avatar/name button in the nav pill (only shown once
   // logged in). Fills in from the cached stepplify_user immediately so
@@ -1302,10 +2096,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Tabs
   const profileTabInfo     = document.getElementById('profileTabInfo');
+  const profileTabFavorites = document.getElementById('profileTabFavorites');
   const profileTabFriends  = document.getElementById('profileTabFriends');
+  const profileTabSupport  = document.getElementById('profileTabSupport');
   const profilePanelInfo   = document.getElementById('profilePanelInfo');
+  const profilePanelFavorites = document.getElementById('profilePanelFavorites');
   const profilePanelFriends = document.getElementById('profilePanelFriends');
+  const profilePanelSupport = document.getElementById('profilePanelSupport');
+  const profileSupportQuickBtn = document.getElementById('profileSupportQuickBtn');
+  const profileSupportForm = document.getElementById('profileSupportForm');
   const profileFriendsBadge = document.getElementById('profileFriendsBadge');
+  const profileFavoritesList = document.getElementById('profileFavoritesList');
+  const profileFavoritesCount = document.getElementById('profileFavoritesCount');
 
   // Friends tab
   const friendsSearchInput   = document.getElementById('friendsSearchInput');
@@ -1328,13 +2130,78 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---------- Tabs ----------
     const switchProfileTab = (tab) => {
       const isInfo = tab === 'info';
-      profileTabInfo.classList.toggle('active', isInfo);
-      profileTabFriends.classList.toggle('active', !isInfo);
-      profilePanelInfo.hidden = !isInfo;
-      profilePanelFriends.hidden = isInfo;
+      const isFav = tab === 'favorites';
+      const isFriends = tab === 'friends';
+      const isSupport = tab === 'support';
+      profileTabInfo?.classList.toggle('active', isInfo);
+      profileTabFavorites?.classList.toggle('active', isFav);
+      profileTabFriends?.classList.toggle('active', isFriends);
+      profileTabSupport?.classList.toggle('active', isSupport);
+      if (profilePanelInfo) profilePanelInfo.hidden = !isInfo;
+      if (profilePanelFavorites) profilePanelFavorites.hidden = !isFav;
+      if (profilePanelFriends) profilePanelFriends.hidden = !isFriends;
+      if (profilePanelSupport) profilePanelSupport.hidden = !isSupport;
+      if (isFav) loadFavoritesData();
+      if (isFriends) loadFriendsData();
     };
     profileTabInfo?.addEventListener('click', () => switchProfileTab('info'));
+    profileTabFavorites?.addEventListener('click', () => switchProfileTab('favorites'));
     profileTabFriends?.addEventListener('click', () => switchProfileTab('friends'));
+    profileTabSupport?.addEventListener('click', () => switchProfileTab('support'));
+    document.querySelectorAll('.support-cat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const parent = btn.closest('.profile-field');
+        if (parent) {
+          parent.querySelectorAll('.support-cat-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const hiddenInput = parent.querySelector('#supportSubject');
+          if (hiddenInput) hiddenInput.value = btn.dataset.value || 'Вопрос';
+        }
+      });
+    });
+
+    profileSupportForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const subject = document.getElementById('supportSubject')?.value.trim();
+      const message = document.getElementById('supportMessage')?.value.trim();
+      const hint = document.getElementById('supportSendHint');
+      const btn = document.getElementById('supportSendBtn');
+      if (!subject || !message) return;
+      if (btn) btn.disabled = true;
+
+      try {
+        const token = localStorage.getItem('stepplify_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const res = await fetch(`${API_URL}/support`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ subject, message })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Ошибка при отправке обращения');
+
+        if (hint) {
+          hint.textContent = 'Обращение отправлено! Мы ответим вам в ближайшее время.';
+          hint.className = 'profile-save-hint is-success';
+        }
+        if (profileSupportForm) profileSupportForm.reset();
+      } catch (err) {
+        if (hint) {
+          hint.textContent = err.message || 'Ошибка при отправке обращения';
+          hint.className = 'profile-save-hint is-error';
+        }
+      } finally {
+        setTimeout(() => {
+          if (btn) btn.disabled = false;
+          if (hint) {
+            hint.textContent = '';
+            hint.className = 'profile-save-hint';
+          }
+        }, 4000);
+      }
+    });
 
     // ---------- Avatar upload ----------
     // Camera badge just opens the (hidden, styleless) file input — the
@@ -1466,8 +2333,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---------- Friends tab ----------
     const renderFriendRow = (user, actionsHtml) => `
       <div class="friend-row" data-user-id="${user.id}">
-        <div class="friend-row-avatar">${user.avatarUrl ? `<img src="${resolveAvatarUrl(user.avatarUrl)}" alt="" />` : `<span>${getInitials(user.fullName)}</span>`}</div>
-        <div class="friend-row-info">
+        <div class="friend-row-avatar clickable-profile" data-user-id="${user.id}">${user.avatarUrl ? `<img src="${resolveAvatarUrl(user.avatarUrl)}" alt="" />` : `<span>${getInitials(user.fullName)}</span>`}</div>
+        <div class="friend-row-info clickable-profile" data-user-id="${user.id}">
           <div class="friend-row-name">${escapeHtml(user.fullName)}</div>
           <div class="friend-row-meta">${escapeHtml(user.school || '')}${user.grade ? ' · ' + escapeHtml(user.grade) : ''} · ⭐ ${user.points ?? 0}</div>
         </div>
@@ -1505,6 +2372,49 @@ document.addEventListener('DOMContentLoaded', () => {
           `)).join('')
         : '<div class="friends-empty">Пока нет друзей — найдите их через поиск выше.</div>';
     };
+
+    const renderFavoritesPanel = (favorites) => {
+      if (profileFavoritesCount) profileFavoritesCount.textContent = String(favorites.length);
+      if (!profileFavoritesList) return;
+      if (!favorites.length) {
+        profileFavoritesList.innerHTML = '<div class="profile-articles-empty">У вас пока нет избранных статей.</div>';
+        return;
+      }
+      profileFavoritesList.innerHTML = favorites.map((a) => `
+        <button type="button" class="profile-article-row" data-article-id="${a.id}">
+          <div class="profile-article-info">
+            <div class="profile-article-title">${escapeHtml(a.title)}</div>
+            <div class="profile-article-meta">${escapeHtml(a.category)}${a.locationName ? ' · ' + escapeHtml(a.locationName) : ''}</div>
+          </div>
+          <div class="profile-article-views">👁 ${a.viewsCount ?? 0}</div>
+        </button>
+      `).join('');
+      profileFavoritesList.querySelectorAll('.profile-article-row').forEach((row) => {
+        row.addEventListener('click', () => {
+          closeProfileModal();
+          window.openArticleModal?.(row.dataset.articleId);
+        });
+      });
+    };
+
+    const loadFavoritesData = async () => {
+      const token = localStorage.getItem('stepplify_token');
+      if (!token) return;
+      if (profileFavoritesList) {
+        profileFavoritesList.innerHTML = '<div class="top10-loading">Загружаем избранное...</div>';
+      }
+      try {
+        const res = await fetch(`${API_URL}/favorites`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Ошибка загрузки избранного');
+        renderFavoritesPanel(data);
+      } catch (err) {
+        if (profileFavoritesList) {
+          profileFavoritesList.innerHTML = `<div class="auth-error">${escapeHtml(err.message)}</div>`;
+        }
+      }
+    };
+    window.loadFavoritesData = loadFavoritesData;
 
     const loadFriendsData = async () => {
       const token = localStorage.getItem('stepplify_token');
@@ -1640,8 +2550,10 @@ document.addEventListener('DOMContentLoaded', () => {
       profileSaveHint.className = 'profile-save-hint';
       profileArticlesList.innerHTML = '<div class="top10-loading">Загружаем статьи...</div>';
       friendsList.innerHTML = '<div class="friends-loading">Загружаем друзей...</div>';
+      if (profileFavoritesList) profileFavoritesList.innerHTML = '<div class="top10-loading">Загружаем избранное...</div>';
 
       loadFriendsData();
+      loadFavoritesData();
 
       try {
         const res = await fetch(`${API_URL}/users/profile`, {
@@ -2420,13 +3332,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // the same light running the other way - and back to day.
     const TIMELINE = [
       [0.00, 'day'],
-      [0.16, 'day'],
-      [0.31, 'evening'],
-      [0.42, 'evening'],
-      [0.55, 'night'],
-      [0.71, 'night'],
-      [0.82, 'evening'],
-      [0.88, 'evening'],
+      [0.23, 'day'],
+      [0.26, 'evening'],
+      [0.45, 'evening'],
+      [0.48, 'night'],
+      [0.68, 'night'],
+      [0.71, 'evening'],
+      [0.87, 'evening'],
+      [0.90, 'day'],
       [1.00, 'day'],
     ];
 
@@ -2452,49 +3365,48 @@ document.addEventListener('DOMContentLoaded', () => {
       // rather than on tone.
       ['--ink-soft', [26, 33, 42, 1],     [14, 20, 28, 1],    [206, 217, 231, 1]],
       ['--ink-mute', [16, 24, 34, 0.72],  [12, 18, 26, 0.88], [226, 236, 248, 0.7]],
-      ['--warm',     [138, 31, 43, 1],    [88, 15, 25, 1],    [233, 152, 161, 1]],
-      ['--rail',     [138, 31, 43, 0.15], [138, 31, 43, 0.3], [226, 236, 248, 0.22]],
+      ['--warm',     [250, 195, 80, 1],   [45, 35, 95, 1],    [253, 186, 116, 1]],
+      ['--rail',     [250, 195, 80, 0.3], [45, 35, 95, 0.4],  [253, 186, 116, 0.35]],
     ];
 
     const clamp01 = (t) => Math.min(1, Math.max(0, t));
     const smoothstep = (t) => t * t * (3 - 2 * t);
+    const sharpstep = (t) => {
+      const c = clamp01(t);
+      return c < 0.5 ? 4 * c * c * c : 1 - Math.pow(-2 * c + 2, 3) / 2;
+    };
     const lerp = (a, b, t) => a + (b - a) * t;
 
-    // Two-stage: day -> dusk as the light goes, then the whole thing ->
-    // its night value across the swap. Ramps with no dusk stop of their
-    // own just hold their daylight colour until the swap.
-    const applyRamps = (ramps, toDusk, toNight) => {
+    // Three-stage interpolation: day -> evening (dusk / brand red) -> night (warm amber gold)
+    const applyRamps = (ramps, eveningFactor, nightFactor) => {
       ramps.forEach(([name, day, dusk, night]) => {
-        const from = dusk || day;
-        const parts = [0, 1, 2].map((i) => Math.round(
-          lerp(lerp(day[i], from[i], toDusk), night[i], toNight),
-        ));
-        const a = lerp(lerp(day[3], from[3], toDusk), night[3], toNight).toFixed(3);
-        section.style.setProperty(name, `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${a})`);
+        let parts, a;
+        if (nightFactor > 0) {
+          const from = dusk || day;
+          parts = [0, 1, 2].map((i) => Math.round(lerp(from[i], night[i], nightFactor)));
+          a = lerp(from[3], night[3], nightFactor);
+        } else if (eveningFactor > 0 && dusk) {
+          parts = [0, 1, 2].map((i) => Math.round(lerp(day[i], dusk[i], eveningFactor)));
+          a = lerp(day[3], dusk[3], eveningFactor);
+        } else {
+          parts = [day[0], day[1], day[2]];
+          a = day[3];
+        }
+        section.style.setProperty(name, `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${typeof a === 'number' ? a.toFixed(3) : a})`);
       });
     };
 
     // Which two states the given point on the runway falls between, and
-    // how far across. Eased rather than linear so each state settles into
-    // the next instead of arriving at a constant rate and stopping dead.
+    // how far across. Eased sharply so each state transitions fast and crisp.
     const stateAt = (p) => {
       let i = 0;
       while (i < TIMELINE.length - 2 && p > TIMELINE[i + 1][0]) i++;
       const [pFrom, from] = TIMELINE[i];
       const [pTo, to] = TIMELINE[i + 1];
       const span = pTo - pFrom;
-      return { from, to, t: span > 0 ? smoothstep(clamp01((p - pFrom) / span)) : 0 };
+      return { from, to, t: span > 0 ? sharpstep((p - pFrom) / span) : 0 };
     };
 
-    // Where the ink swaps from its dusk colours to its night ones, on the
-    // night weight below. Not the middle: it is the point where the sky
-    // behind the facts has darkened just far enough that near-white reads
-    // better on it than near-black. That crossing is a property of the
-    // ink values and of the palettes either side of it, so it has to be
-    // re-solved whenever any of those are retuned - deepening the daylight
-    // blue alone once moved it by a tenth. Solved against the gradient at
-    // the height the body copy actually sits at, where both sides come out
-    // even; anywhere else one of the two is worse.
     const INK_SWAP = 0.417;
 
     const renderSky = (p) => {
@@ -2505,26 +3417,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const parts = [0, 1, 2].map((i) => Math.round(lerp(a[name][i], b[name][i], t)));
         section.style.setProperty(name, `rgb(${parts[0]}, ${parts[1]}, ${parts[2]})`);
       });
-      // How much of each state is showing right now. The scene reads off
-      // these rather than off the palettes: stars, the moon and the birds
-      // care only about how dark it is, and the grass wants the evening's
-      // warmth without having to know which two states it sits between.
+
       const night = (from === 'night' ? 1 - t : 0) + (to === 'night' ? t : 0);
       const evening = (from === 'evening' ? 1 - t : 0) + (to === 'evening' ? t : 0);
       section.style.setProperty('--night', night.toFixed(4));
       section.style.setProperty('--evening', evening.toFixed(4));
-      // Type cannot ride the palettes. Any crossfade from dark to light
-      // goes through mid-grey, and it would be doing that exactly as the
-      // sky passes through a middling tone of its own - against which only
-      // near-black or near-white has any contrast at all. Tied to scroll,
-      // the visitor can stop dead in the middle of that and read nothing.
-      //
-      // So the ink leans into black as the light goes, which holds it
-      // against the darkening sky, and then *steps* to its night colours.
-      // The smoothing is a CSS colour transition instead: driven by time
-      // rather than by scroll position, it can be passed through but
-      // never parked in, and it reads as a lamp coming on.
-      applyRamps(INK_RAMPS, smoothstep(clamp01(night / INK_SWAP)), night >= INK_SWAP ? 1 : 0);
+
+      const eveningFactor = smoothstep(clamp01(evening));
+      const nightFactor = night >= INK_SWAP ? 1 : smoothstep(clamp01(night / INK_SWAP));
+      applyRamps(INK_RAMPS, eveningFactor, nightFactor);
     };
 
     // Stars are built here rather than shipped in the markup because
@@ -2636,23 +3537,34 @@ document.addEventListener('DOMContentLoaded', () => {
     update();
   })();
 
-  // Rotating headline tail — cycles through phrases with a fade/blur
-  // swap, same idea as the hero on grader.cloud
   const rotator = document.getElementById('rotator');
   if (rotator) {
-    const phrases = [
-      'о своём крае',
-      'о малоизвестных местах',
-      'и находи читателей',
-      'получай отклики',
-      'выиграй путёвку',
-    ];
-    // Longer phrases shrink to fit the line instead of wrapping, which
-    // is what holds the headline to three lines. Guessing the scale from
-    // character count (as this used to) can't know the real width —
-    // "о малоизвестных местах" still wrapped — so measure the rendered
-    // phrase against the line it has to fit in, with a floor so nothing
-    // ends up unreadably small.
+    rotator.classList.add('notranslate'); // Prevent Google Translate from messing it up
+
+    const phrasesMap = {
+      'rus': [
+        'о своём крае',
+        'о малоизвестных местах',
+        'и находи читателей',
+        'получай отклики',
+        'выиграй путёвку'
+      ],
+      'kaz': [
+        'өз өлкең жайлы',
+        'аз білетін жерлер жайлы',
+        'оқырмандар тап',
+        'пікірлер ал',
+        'жолдама ұтып ал'
+      ],
+      'eng': [
+        'about your region',
+        'about hidden places',
+        'and find readers',
+        'get feedback',
+        'win a trip'
+      ]
+    };
+
     const minScale = 0.52;
     const slot = rotator.parentElement;
     const fitPhrase = () => {
@@ -2667,16 +3579,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const swapDuration = 350;
     const holdDuration = 2600;
 
+    // Apply translation to initial state too
+    const initialLang = localStorage.getItem('stepplify_lang') || 'rus';
+    rotator.textContent = (phrasesMap[initialLang] || phrasesMap['rus'])[0];
+
     fitPhrase();
     window.addEventListener('resize', fitPhrase, { passive: true });
 
     setInterval(() => {
       rotator.classList.add('is-swapping');
       setTimeout(() => {
+        const lang = localStorage.getItem('stepplify_lang') || 'rus';
+        const phrases = phrasesMap[lang] || phrasesMap['rus'];
         index = (index + 1) % phrases.length;
         rotator.textContent = phrases[index];
-        // Measured while the phrase is still invisible mid-swap, so the
-        // resize never shows.
         fitPhrase();
         rotator.classList.remove('is-swapping');
       }, swapDuration);
@@ -2841,7 +3757,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderCard = (a) => `
       <article class="article-card" data-id="${a.id ?? ''}">
-        <span class="tag ${a.tagClass}">${a.tag}</span>
         <h3>${a.title}</h3>
         <div class="article-author">${a.author}</div>
         <div class="article-meta">
@@ -2890,201 +3805,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const marqueeViewport = marqueeTrack.closest('.marquee');
     const reducedMotionMarquee = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (marqueeViewport && !reducedMotionMarquee) {
-      const fadeZone = 130; // px inward from each edge over which opacity ramps
+      const fadeStart = 40;  // Начинаем скрывать, когда до края всего 40px
+      const fadeEnd = -40;   // Полностью скрыт, когда ушел за край на 40px
       const tickFade = () => {
         const viewportRect = marqueeViewport.getBoundingClientRect();
         Array.from(marqueeTrack.children).forEach((card) => {
           const cardRect = card.getBoundingClientRect();
-          const centerX = cardRect.left + cardRect.width / 2;
-          const distFromLeft = centerX - viewportRect.left;
-          const distFromRight = viewportRect.right - centerX;
-          const t = Math.max(0, Math.min(1, Math.min(distFromLeft, distFromRight) / fadeZone));
+          const distFromLeft = cardRect.left - viewportRect.left;
+          const distFromRight = viewportRect.right - cardRect.right;
+          const minDist = Math.min(distFromLeft, distFromRight);
+          
+          let t = (minDist - fadeEnd) / (fadeStart - fadeEnd);
+          t = Math.max(0, Math.min(1, t));
           card.style.opacity = t.toFixed(3);
         });
         requestAnimationFrame(tickFade);
       };
       requestAnimationFrame(tickFade);
     }
-  }
-
-  // Winners — same underlying data feeds two widgets styled after the
-  // sat4.me "Our users got: 1500+ results" panel:
-  //   1) a small pill strip that scrolls continuously (.winners-pill-track)
-  //   2) a fixed 5-slot photo cluster (.winners-stage) that holds its
-  //      shape and shuffles which winner's photo/badge each slot shows
-  let winners = [
-    { name: 'Айдана Сапарова', meta: 'НИШ ФМН · 11 класс', dest: 'Бурабай', img: 'https://i.pravatar.cc/300?img=47', quote: 'Не ожидала, что статья про озёра приведёт меня к отдыху на настоящем озере!' },
-    { name: 'Нурлан Ахметов', meta: 'КБТУ · 3 курс', dest: 'Түркістан', img: 'https://i.pravatar.cc/300?img=13', quote: 'Опубликовал статью для портфолио — а получил путёвку в Түркістан.' },
-    { name: 'Дана Ермекова', meta: 'НИШ ХБН · 10 класс', dest: 'Медеу', img: 'https://i.pravatar.cc/300?img=25', quote: 'Даже не думала, что моё эссе выберут — и вот я еду в горы!' },
-    { name: 'Тимур Жаксыбеков', meta: 'КазНУ · 3 курс', dest: 'Щучинск', img: 'https://i.pravatar.cc/300?img=14', quote: 'Регулярно публиковался — и однажды это окупилось поездкой.' },
-    { name: 'Алия Нурланова', meta: 'НИШ ХБН · 11 класс', dest: 'Алаколь', img: 'https://i.pravatar.cc/300?img=44', quote: 'Никогда не думала, что за статью можно выиграть отпуск.' },
-    { name: 'Данияр Сериков', meta: 'Satbayev University', dest: 'Кокшетау', img: 'https://i.pravatar.cc/300?img=8', quote: 'Stepplify — это не только публикации, но и реальные призы.' },
-    { name: 'Жанна Мұратқызы', meta: 'НИШ ФМН · 12 класс', dest: 'Имантау', img: 'https://i.pravatar.cc/300?img=32', quote: 'За эссе про идентичность казахстанцев дали путёвку — совпадение, но приятное.' },
-    { name: 'Асхат Бекенов', meta: 'ЕНУ · 4 курс', dest: 'Шарын', img: 'https://i.pravatar.cc/300?img=51', quote: 'Публикуюсь ради практики, а тут ещё и каньон в подарок.' },
-  ];
-
-  // 1) Result pill strip
-  const pillTrack = document.getElementById('winnersPillTrack');
-  if (pillTrack) {
-    const renderPill = (w) => `
-      <div class="winners-pill">
-        <img src="${w.img}" alt="${w.name}" loading="lazy" />
-        <div>
-          <span class="winners-pill-dest">${w.dest}</span><span class="winners-pill-label">путёвка</span>
-          <div class="winners-pill-name">${w.name}</div>
-        </div>
-      </div>`;
-    // Rendered twice back-to-back so translateX(-50%) loops seamlessly
-    pillTrack.innerHTML = winners.map(renderPill).join('') + winners.map(renderPill).join('');
-
-    // The CSS animation already pauses the strip on hover (see
-    // .winners-pill-wrap:hover in styles.css) — this layers a manual
-    // wheel-driven pan on top of it so the strip can be nudged left/right
-    // while it's paused. The animation drives the independent `translate`
-    // property, so setting `transform` here composes with it instead of
-    // fighting it, and un-hovering just drops the manual offset and lets
-    // the animation carry on from wherever it already was.
-    const pillWrap = pillTrack.closest('.winners-pill-wrap');
-    if (pillWrap) {
-      let manualOffset = 0;
-      pillWrap.addEventListener('wheel', (e) => {
-        const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-        if (!delta) return;
-        e.preventDefault();
-
-        const cs = getComputedStyle(pillTrack);
-        const animX = cs.translate && cs.translate !== 'none' ? parseFloat(cs.translate) || 0 : 0;
-        const setWidth = pillTrack.scrollWidth / 2; // width of one of the two duplicated pill sets
-
-        // Wrap seamlessly within one set's width instead of clamping —
-        // the track holds two identical copies back-to-back, so any
-        // offset looks right once folded into that range, giving
-        // endless scrolling in both directions rather than a dead stop.
-        const target = animX + manualOffset - delta;
-        const wrapped = -(((-target) % setWidth + setWidth) % setWidth);
-        manualOffset = wrapped - animX;
-
-        pillTrack.style.transform = `translateX(${manualOffset}px)`;
-      }, { passive: false });
-
-      pillWrap.addEventListener('mouseleave', () => {
-        manualOffset = 0;
-        pillTrack.style.transform = '';
-      });
-    }
-  }
-
-  // 2) Shuffling 5-slot stage
-  const stage = document.getElementById('winnersStage');
-  if (stage) {
-    const themeClasses = ['wp-1', 'wp-2', 'wp-3'];
-    const slots = Array.from(stage.querySelectorAll('.ws-slot'));
-    const quoteBox = document.getElementById('winnersQuote');
-    const quoteText = quoteBox.querySelector('.ws-quote-text');
-    const quoteName = quoteBox.querySelector('.ws-quote-name');
-    const quoteMeta = quoteBox.querySelector('.ws-quote-meta');
-    const centerSlot = stage.querySelector('.ws-l-c');
-
-    // The five cards are positioned at fixed pixel offsets inside a
-    // 746x440 box, but the column they sit in is only as wide as the
-    // panel leaves it — 698px at 1344, 640px at 1280 — so the right-hand
-    // card was being cut in half on anything but a wide screen. Scale
-    // the whole arrangement to the room available instead, and hand the
-    // stage back the height that scaling leaves it with so the panel
-    // shrinks to match rather than keeping a gap under the cards.
-    const stageInner = stage.querySelector('.ws-inner');
-    const winnersSection = stage.closest('.winners');
-    const winnersPanel = stage.closest('.winners-panel');
-    if (stageInner && winnersSection && winnersPanel) {
-      const STAGE_W = 746;
-      const STAGE_H = 440;
-      const NAV_CLEARANCE = 96; // the fixed nav pill plus a little air
-      const MIN_SCALE = 0.62;
-      const padV = (el) => {
-        const cs = getComputedStyle(el);
-        return parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-      };
-      const fitStage = () => {
-        // Height budget comes from the viewport and the two paddings —
-        // never from the panel's own height, which depends on this
-        // result and would otherwise feed back into itself.
-        const roomH = window.innerHeight - NAV_CLEARANCE
-          - padV(winnersSection) - padV(winnersPanel);
-        const scale = Math.max(MIN_SCALE, Math.min(
-          1,
-          stage.clientWidth / STAGE_W,
-          roomH / STAGE_H,
-        ));
-        stageInner.style.transform = `scale(${scale.toFixed(4)})`;
-        stage.style.height = `${Math.round(STAGE_H * scale)}px`;
-      };
-      fitStage();
-      window.addEventListener('resize', fitStage, { passive: true });
-    }
-
-    const paintSlot = (slot, winner, themeIndex) => {
-      const card = slot.querySelector('.ws-card');
-      card.classList.remove(...themeClasses);
-      card.classList.add(themeClasses[themeIndex % themeClasses.length]);
-      card.querySelector('img').src = winner.img;
-      card.querySelector('img').alt = winner.name;
-      card.querySelector('.ws-badge').textContent = '🏆 ' + winner.dest;
-    };
-
-    const paintQuote = (winner) => {
-      quoteText.textContent = `«${winner.quote}»`;
-      quoteName.textContent = winner.name;
-      quoteMeta.textContent = winner.meta;
-    };
-
-    const initWinnersWidget = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/winners');
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.length > 0) {
-            winners = data.map(w => ({
-              name: w.name,
-              meta: w.meta,
-              dest: w.destination,
-              img: w.img,
-              quote: w.quote
-            }));
-          }
-        }
-      } catch (err) {
-        console.warn('Backend server not running, using fallback winners.', err);
-      }
-
-      let offset = 0;
-      slots.forEach((slot, i) => paintSlot(slot, winners[i % winners.length], i));
-      paintQuote(winners[Array.from(slots).indexOf(centerSlot) % winners.length]);
-
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (!prefersReducedMotion) {
-        setInterval(() => {
-          offset++;
-          slots.forEach((slot, i) => {
-            setTimeout(() => {
-              const card = slot.querySelector('.ws-card');
-              const isCenter = slot === centerSlot;
-              card.classList.add('is-swapping');
-              if (isCenter) quoteBox.classList.add('is-swapping');
-              setTimeout(() => {
-                const winner = winners[(i + offset) % winners.length];
-                paintSlot(slot, winner, i + offset);
-                card.classList.remove('is-swapping');
-                if (isCenter) {
-                  paintQuote(winner);
-                  quoteBox.classList.remove('is-swapping');
-                }
-              }, 260);
-            }, i * 140);
-          });
-        }, 2800);
-      }
-    };
-    initWinnersWidget();
   }
 
   // Mouse parallax on the (fixed, whole-page) background — the photo
@@ -3098,30 +3836,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (scene && !prefersReducedMotion) {
     const strength = 14; // max drift in px
-    let targetX = 0;
-    let targetY = 0;
+    let mouseX = 0;
+    let mouseY = 0;
     let curX = 0;
     let curY = 0;
 
     window.addEventListener('mousemove', (e) => {
-      const nx = e.clientX / window.innerWidth - 0.5; // -0.5 .. 0.5
+      const nx = e.clientX / window.innerWidth - 0.5;
       const ny = e.clientY / window.innerHeight - 0.5;
-      targetX = -nx * strength;
-      targetY = -ny * strength;
-    });
+      mouseX = -nx * strength;
+      mouseY = -ny * strength;
+    }, { passive: true });
 
     document.documentElement.addEventListener('mouseleave', () => {
-      targetX = 0;
-      targetY = 0;
+      mouseX = 0;
+      mouseY = 0;
     });
 
-    const tick = () => {
-      curX += (targetX - curX) * 0.06;
-      curY += (targetY - curY) * 0.06;
-      scene.style.transform = `translate3d(${curX.toFixed(2)}px, ${curY.toFixed(2)}px, 0)`;
+    let lastTime = performance.now();
+
+    const tick = (time) => {
+      // Calculate delta time in seconds, capped to avoid huge jumps if tab was inactive
+      const dt = Math.min((time - lastTime) / 1000, 0.1);
+      lastTime = time;
+
+      // Frame-rate independent lerp (exponential decay)
+      // speed factor: 4.0 gives a nice, smooth, slightly delayed follow effect
+      const factor = 1 - Math.exp(-dt * 4.0);
+
+      // Smooth interpolation towards the target mouse position
+      curX += (mouseX - curX) * factor;
+      curY += (mouseY - curY) * factor;
+
+      // Ensure we round to avoid sub-pixel rendering jitter on some screens
+      // scale(1.04) prevents the edges of the image from showing during translation
+      scene.style.transform = `translate3d(${curX.toFixed(2)}px, ${curY.toFixed(2)}px, 0) scale(1.04)`;
       requestAnimationFrame(tick);
     };
-    requestAnimationFrame(tick);
+
+    requestAnimationFrame((time) => {
+      lastTime = time;
+      tick(time);
+    });
   }
 
   // Scroll progress bar — thin fill above the nav that tracks how
@@ -3138,4 +3894,256 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('scroll', updateProgress, { passive: true });
     window.addEventListener('resize', updateProgress);
   }
+
+  // Service Worker Registration for Offline & 404 Fallback
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.log('SW registration skipped:', err);
+      });
+    });
+  }
+
+  // Network Offline Event Listener
+  window.addEventListener('offline', () => {
+    if (!window.location.pathname.includes('404.html')) {
+      window.location.href = '404.html?mode=offline';
+    }
+  });
 });
+
+
+// --- REPORT SYSTEM (INJECTED) ---
+const reportModalsHTML = `
+<!-- Report Modal -->
+<div class="auth-overlay" id="reportOverlay" aria-hidden="true" style="align-items:center; justify-content:center; position:fixed; inset:0; z-index:9999;">
+  <div class="auth-modal" role="dialog" aria-modal="true" aria-label="Пожаловаться" style="background:#161b26; padding:24px; border-radius:16px; width:400px; max-width:90%; position:relative; border:1px solid rgba(255,255,255,0.1);">
+    <button class="auth-close" id="reportClose" aria-label="Закрыть" style="position:absolute; top:16px; right:16px; background:none; border:none; color:rgba(255,255,255,0.5); font-size:24px; cursor:pointer;">&times;</button>
+    <h2 class="modal-title" style="margin-bottom:16px; color:#fff; font-size:1.2rem;">Пожаловаться</h2>
+    <form id="reportForm">
+      <input type="hidden" id="reportTargetType" name="targetType">
+      <input type="hidden" id="reportTargetId" name="targetId">
+      <div class="auth-field" style="margin-bottom:16px;">
+        <label for="reportReason" style="display:block; margin-bottom:8px; color:rgba(255,255,255,0.7); font-size:0.9rem;">Причина жалобы</label>
+        <select id="reportReason" name="reason" required style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#fff;">
+          <option value="spam">Спам или реклама</option>
+          <option value="inaccurate">Недостоверная информация</option>
+          <option value="offensive">Оскорбления / Недопустимый контент</option>
+          <option value="other">Другое</option>
+        </select>
+        <input type="text" id="reportReasonOther" style="display:none; width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#fff; margin-top:8px;" placeholder="Опишите причину...">
+      </div>
+      <button type="submit" class="auth-submit btn btn-primary" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:8px; cursor:pointer;">Отправить жалобу</button>
+    </form>
+  </div>
+</div>
+
+<!-- Admin Reports Modal -->
+<div class="auth-overlay" id="adminReportsOverlay" aria-hidden="true" style="align-items:center; justify-content:center; position:fixed; inset:0; z-index:9999;">
+  <div class="auth-modal" role="dialog" aria-modal="true" aria-label="Панель жалоб" style="background:#161b26; padding:24px; border-radius:16px; width:600px; max-width:90%; max-height:80vh; display:flex; flex-direction:column; position:relative; border:1px solid rgba(255,255,255,0.1);">
+    <button class="auth-close" id="adminReportsClose" aria-label="Закрыть" style="position:absolute; top:16px; right:16px; background:none; border:none; color:rgba(255,255,255,0.5); font-size:24px; cursor:pointer;">&times;</button>
+    <h2 class="modal-title" style="margin-bottom:16px; color:#fff; font-size:1.2rem;">Жалобы (Модерация)</h2>
+    <div id="adminReportsList" style="display:flex; flex-direction:column; gap:12px; overflow-y:auto; padding-right:8px;"></div>
+  </div>
+</div>
+`;
+
+if (document.body) {
+  if (!document.getElementById('reportOverlay')) {
+    document.body.insertAdjacentHTML('beforeend', reportModalsHTML);
+    bindReportEvents();
+  }
+} else {
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!document.getElementById('reportOverlay')) {
+      document.body.insertAdjacentHTML('beforeend', reportModalsHTML);
+      bindReportEvents();
+    }
+  });
+}
+
+function bindReportEvents() {
+  document.getElementById('reportClose').addEventListener('click', () => {
+    document.getElementById('reportOverlay').classList.remove('open');
+  });
+
+  document.getElementById('reportReason').addEventListener('change', (e) => {
+    const otherInput = document.getElementById('reportReasonOther');
+    if (e.target.value === 'other') {
+      otherInput.style.display = 'block';
+      otherInput.required = true;
+    } else {
+      otherInput.style.display = 'none';
+      otherInput.required = false;
+    }
+  });
+
+  document.getElementById('reportForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('stepplify_token');
+    const type = document.getElementById('reportTargetType').value;
+    const id = document.getElementById('reportTargetId').value;
+    let reason = document.getElementById('reportReason').value;
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
+    const originalBg = btn.style.background;
+    
+    if (reason === 'other') {
+      reason = 'Другое: ' + document.getElementById('reportReasonOther').value;
+    }
+    
+    btn.textContent = 'Отправка...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ targetType: type, targetId: id, reason })
+      });
+      if (res.ok) {
+        btn.textContent = 'Успешно отправлено!';
+        btn.style.background = '#555'; // Gray
+        setTimeout(() => {
+          document.getElementById('reportOverlay').classList.remove('open');
+          document.getElementById('reportForm').reset();
+          document.getElementById('reportReasonOther').style.display = 'none';
+          document.getElementById('reportReasonOther').required = false;
+          btn.textContent = originalText;
+          btn.style.background = originalBg;
+          btn.disabled = false;
+        }, 1200);
+      } else {
+        btn.textContent = 'Ошибка отправки';
+        setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 2000);
+      }
+    } catch (err) {
+      console.error(err);
+      btn.textContent = 'Ошибка сети';
+      setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 2000);
+    }
+  });
+
+  document.getElementById('adminReportsClose').addEventListener('click', () => {
+    document.getElementById('adminReportsOverlay').classList.remove('open');
+  });
+}
+
+window.openReportModal = (type, id) => {
+  const token = localStorage.getItem('stepplify_token');
+  if (!token) {
+    alert('Пожалуйста, войдите в систему, чтобы отправить жалобу.');
+    return;
+  }
+  const overlay = document.getElementById('reportOverlay');
+  if (!overlay) {
+    alert('Модальное окно еще не загружено, попробуйте еще раз.');
+    return;
+  }
+  document.getElementById('reportTargetType').value = type;
+  document.getElementById('reportTargetId').value = id;
+  overlay.classList.add('open');
+};
+
+window.openAdminReportsModal = async () => {
+  const token = localStorage.getItem('stepplify_token');
+  const overlay = document.getElementById('adminReportsOverlay');
+  if (!overlay) {
+    alert('Модальное окно еще не загружено, попробуйте еще раз.');
+    return;
+  }
+  overlay.classList.add('open');
+  const list = document.getElementById('adminReportsList');
+  list.innerHTML = 'Загрузка...';
+
+  try {
+    const res = await fetch('/api/reports', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to load');
+    const reports = await res.json();
+    
+    if (reports.length === 0) {
+      list.innerHTML = '<div style="color:rgba(255,255,255,0.5);">Нет активных жалоб.</div>';
+      return;
+    }
+
+    list.innerHTML = reports.map(r => `
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:12px; border-radius:8px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <strong 
+            style="color:#fff; ${r.targetArticleId ? 'cursor:pointer; text-decoration:underline;' : ''}" 
+            ${r.targetArticleId ? `onclick="document.getElementById('adminReportsOverlay').classList.remove('open'); window.openArticleModal(${r.targetArticleId}, '${r.targetType}', ${r.targetId})"` : ''}
+          >
+            ID: ${r.id} | ${r.targetTitle || `Тип: ${r.targetType} (${r.targetId})`}
+          </strong>
+          <span style="color:${r.status === 'pending' ? 'var(--accent)' : 'gray'};">${r.status}</span>
+        </div>
+        <div style="color:rgba(255,255,255,0.7); font-size:0.9rem; margin-bottom:8px;">
+          От: ${r.user.fullName} (${r.user.email})<br>
+          Причина: ${r.reason}
+        </div>
+        ${r.status === 'pending' ? `
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button onclick="resolveReport(${r.id}, 'resolved')" style="padding:6px 12px; background:#2e7d32; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">Подтвердить</button>
+            <button onclick="resolveReport(${r.id}, 'dismissed')" style="padding:6px 12px; background:#555; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">Отклонить</button>
+          </div>
+        ` : ''}
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error(err);
+    list.innerHTML = '<div style="color:var(--accent);">Ошибка загрузки жалоб. Вы точно модератор?</div>';
+  }
+};
+
+window.resolveReport = async (id, status) => {
+  const token = localStorage.getItem('stepplify_token');
+  try {
+    const res = await fetch(`/api/reports/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ status })
+    });
+    if (res.ok) {
+      window.openAdminReportsModal(); // refresh list
+      if (typeof updateNavFromStorage === 'function') updateNavFromStorage();
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Ошибка при обновлении статуса');
+  }
+};
+// --- END REPORT SYSTEM ---
+
+window.grantModRights = async (userId) => {
+  const token = localStorage.getItem('stepplify_token');
+  try {
+    const res = await fetch(`/api/users/${userId}/role`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ role: 'moderator' })
+    });
+    if (res.ok) {
+      window.openPublicProfileModal?.(userId);
+    }
+  } catch(e) {
+    console.error(e);
+  }
+};
+
+window.revokeModRights = async (userId) => {
+  const token = localStorage.getItem('stepplify_token');
+  try {
+    const res = await fetch(`/api/users/${userId}/role`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ role: 'user' }) // Downgrade back to normal user
+    });
+    if (res.ok) {
+      window.openPublicProfileModal?.(userId);
+    }
+  } catch(e) {
+    console.error(e);
+  }
+};

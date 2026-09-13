@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>404 — Страница не найдена | Stepplify</title>
+<link rel="stylesheet" href="styles.css?v=1786450899" />
+<style>
+  /* ============================================================
+     404 & Offline Custom Page Styles & Animations
+     ============================================================ */
+  body.page-404 {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    min-height: 100svh;
+    background: radial-gradient(circle at 50% 20%, #1c1d33 0%, #0d0e17 70%, #06070a 100%);
+    color: #fff;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  /* Starfield Background */
+  .stars-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    background: #fff;
+    animation: starPulse var(--duration, 3s) infinite ease-in-out var(--delay, 0s);
+    opacity: 0.3;
+  }
+
+  @keyframes starPulse {
+    0%, 100% { opacity: 0.2; transform: scale(0.8); }
+    50% { opacity: 0.9; transform: scale(1.3); box-shadow: 0 0 8px rgba(255, 255, 255, 0.8); }
+  }
+
+  /* Mountain Silhouette */
+  .mountains-svg {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 35vh;
+    min-height: 220px;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.45;
+  }
+
+  /* 404 Hero Container */
+  .container-404 {
+    position: relative;
+    z-index: 10;
+    width: min(720px, 92vw);
+    margin: auto;
+    padding: 20px;
+    text-align: center;
+    perspective: 1000px;
+  }
+
+  .card-404 {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 28px;
+    padding: 3rem 2.5rem;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform-style: preserve-3d;
+    transition: transform 0.15s ease-out, box-shadow 0.3s ease;
+  }
+
+  .card-404:hover {
+    box-shadow: 0 36px 90px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  /* Animated 404 Code */
+  .code-404-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 1rem;
+  }
+
+  .digit-404 {
+    font-size: clamp(80px, 15vw, 140px);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -4px;
+    background: linear-gradient(135deg, #ffffff 0%, #ffd166 40%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 10px 20px rgba(181, 48, 63, 0.4));
+    animation: floatDigit 4s ease-in-out infinite alternate;
+  }
+
+  .digit-404:nth-child(3) {
+    animation-delay: 0.5s;
+  }
+
+  @keyframes floatDigit {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-10px); }
+  }
+
+  /* Animated Floating Compass Icon */
+  .compass-container {
+    width: clamp(80px, 14vw, 120px);
+    height: clamp(80px, 14vw, 120px);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: floatCompass 5s ease-in-out infinite alternate;
+  }
+
+  @keyframes floatCompass {
+    0% { transform: translateY(0) rotate(0deg); }
+    100% { transform: translateY(-12px) rotate(4deg); }
+  }
+
+  .compass-needle {
+    transform-origin: center;
+    animation: spinNeedle 8s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+  }
+
+  @keyframes spinNeedle {
+    0% { transform: rotate(-45deg); }
+    30% { transform: rotate(120deg); }
+    60% { transform: rotate(45deg); }
+    100% { transform: rotate(210deg); }
+  }
+
+  /* Offline Status Pill */
+  .offline-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 6px 16px;
+    border-radius: 999px;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+  }
+
+  .offline-status-pill.is-online {
+    background: rgba(74, 222, 128, 0.15);
+    border-color: rgba(74, 222, 128, 0.4);
+    color: #4ade80;
+  }
+
+  /* Typography */
+  .title-404 {
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 800;
+    color: #fff;
+    margin: 0.5rem 0 0.8rem;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  }
+
+  .desc-404 {
+    font-size: clamp(14px, 2vw, 16px);
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 520px;
+    margin: 0 auto 2rem;
+    line-height: 1.6;
+  }
+
+  /* Quick Search */
+  .search-404-form {
+    display: flex;
+    max-width: 440px;
+    margin: 0 auto 2rem;
+    position: relative;
+  }
+
+  .search-404-input {
+    width: 100%;
+    padding: 14px 110px 14px 18px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    color: #fff;
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.25s ease;
+  }
+
+  .search-404-input:focus {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(181, 48, 63, 0.4);
+  }
+
+  .search-404-btn {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    bottom: 5px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* Action Buttons Grid */
+  .actions-404 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .btn-404-home {
+    padding: 12px 28px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(181, 48, 63, 0.4);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .btn-404-home:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(181, 48, 63, 0.6);
+  }
+
+  .btn-404-pill {
+    padding: 12px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    text-decoration: none;
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+
+  .btn-404-pill:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 560px) {
+    .card-404 {
+      padding: 2rem 1.2rem;
+      border-radius: 20px;
+    }
+    .actions-404 {
+      flex-direction: column;
+      width: 100%;
+    }
+    .btn-404-home, .btn-404-pill {
+      width: 100%;
+      text-align: center;
+    }
+  }
+</style>
+</head>
+<body class="page-404">
+
+<!-- Starfield Background -->
+<div class="stars-bg" id="starsBg"></div>
+
+<!-- Main 404 / Offline Content Card -->
+<main class="container-404">
+  <div class="card-404" id="tiltCard">
+    
+    <div id="offlinePillWrap" hidden>
+      <div class="offline-status-pill" id="offlineStatusPill">Вы находитесь в автономном режиме</div>
+    </div>
+
+    <div class="code-404-wrap">
+      <span class="digit-404" id="digitLeft">4</span>
+      
+      <!-- Animated Compass Illustration -->
+      <div class="compass-container">
+        <svg viewBox="0 0 100 100" width="100%" height="100%" fill="none">
+          <circle cx="50" cy="50" r="45" stroke="rgba(255,255,255,0.2)" stroke-width="3"/>
+          <circle cx="50" cy="50" r="38" stroke="url(#compassGrad)" stroke-width="2"/>
+          <path d="M50 12 L50 18 M50 82 L50 88 M12 50 L18 50 M82 50 L88 50" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round"/>
+          <g class="compass-needle">
+            <polygon points="50,18 44,50 50,46" fill="#b5303f"/>
+            <polygon points="50,18 56,50 50,46" fill="#e63946"/>
+            <polygon points="50,82 44,50 50,54" fill="rgba(255,255,255,0.4)"/>
+            <polygon points="50,82 56,50 50,54" fill="rgba(255,255,255,0.7)"/>
+            <circle cx="50" cy="50" r="4" fill="#fff"/>
+          </g>
+          <defs>
+            <linearGradient id="compassGrad" x1="0" y1="0" x2="100" y2="100">
+              <stop offset="0%" stop-color="#b5303f"/>
+              <stop offset="100%" stop-color="#ffd166"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <span class="digit-404" id="digitRight">4</span>
+    </div>
+
+    <h1 class="title-404" id="title404">Вы заблудились в бескрайней степи</h1>
+    <p class="desc-404" id="desc404">
+      Кажется, данный маршрут ещё не исследован сообществом Stepplify или запрашиваемая страница перемещена.
+    </p>
+
+    <!-- Navigation Shortcuts -->
+    <div class="actions-404">
+      <a href="index.html" class="btn btn-primary btn-404-home">Вернуться на главную</a>
+    </div>
+  </div>
+</main>
+
+<!-- Mountain Skyline Graphic -->
+<svg class="mountains-svg" viewBox="0 0 1200 300" preserveAspectRatio="none">
+  <path d="M0,300 L0,220 L180,140 L340,240 L520,110 L700,210 L880,90 L1060,230 L1200,160 L1200,300 Z" fill="rgba(181, 48, 63, 0.12)"/>
+  <path d="M0,300 L0,250 L120,180 L280,260 L450,160 L650,250 L820,130 L1000,240 L1200,200 L1200,300 Z" fill="rgba(15, 17, 28, 0.9)"/>
+</svg>
+
+<script>
+  // 1. Generate Starfield
+  const starsBg = document.getElementById('starsBg');
+  const starCount = 65;
+  for (let i = 0; i < starCount; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    const size = Math.random() * 3 + 1;
+    star.style.width = `${size}px`;
+    star.style.height = `${size}px`;
+    star.style.left = `${Math.random() * 100}%`;
+    star.style.top = `${Math.random() * 100}%`;
+    star.style.setProperty('--duration', `${Math.random() * 3 + 2}s`);
+    star.style.setProperty('--delay', `${Math.random() * 3}s`);
+    starsBg.appendChild(star);
+  }
+
+  // 2. Interactive 3D Tilt Effect on Mouse Move
+  const tiltCard = document.getElementById('tiltCard');
+  document.addEventListener('mousemove', (e) => {
+    const { clientX, clientY } = e;
+    const { innerWidth, innerHeight } = window;
+    const xRot = (clientY / innerHeight - 0.5) * -16;
+    const yRot = (clientX / innerWidth - 0.5) * 16;
+    tiltCard.style.transform = `rotateX(${xRot}deg) rotateY(${yRot}deg)`;
+  });
+
+  document.addEventListener('mouseleave', () => {
+    tiltCard.style.transform = 'rotateX(0deg) rotateY(0deg)';
+  });
+
+  // 3. Offline Mode Adaptation
+  const isOfflineMode = !navigator.onLine || window.location.search.includes('mode=offline');
+  const title404 = document.getElementById('title404');
+  const desc404 = document.getElementById('desc404');
+  const offlinePillWrap = document.getElementById('offlinePillWrap');
+  const offlineStatusPill = document.getElementById('offlineStatusPill');
+
+  if (isOfflineMode) {
+    offlinePillWrap.hidden = false;
+    title404.textContent = 'Нет подключения к интернету';
+    desc404.textContent = 'Похоже, связь с сетью временно потеряна. Проверьте подключение к Wi-Fi или мобильному интернету. Страница автоматически обновится, как только связь появится.';
+  }
+
+  // Auto-reload when connection is restored
+  window.addEventListener('online', () => {
+    if (offlineStatusPill) {
+      offlineStatusPill.className = 'offline-status-pill is-online';
+      offlineStatusPill.textContent = 'Подключение восстановлено! Перезагружаем...';
+    }
+    setTimeout(() => {
+      window.location.reload();
+    }, 1200);
+  });
+
+  window.addEventListener('offline', () => {
+    offlinePillWrap.hidden = false;
+    if (offlineStatusPill) {
+      offlineStatusPill.className = 'offline-status-pill';
+      offlineStatusPill.textContent = 'Вы находитесь в автономном режиме';
+    }
+    title404.textContent = 'Нет подключения к интернету';
+    desc404.textContent = 'Похоже, связь с сетью временно потеряна. Проверьте подключение к Wi-Fi или мобильному интернету.';
+  });
+</script>
+</body>
+</html>

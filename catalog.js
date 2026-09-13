@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const state = {
     query: '',
-    sort: 'new',
+    sort: 'nearby',
     // Arrives via ?region=... — set when a reader clicks a region on
     // map.html instead of picked from a filter control on this page,
     // so it's plain state rather than one more checkbox group.
@@ -136,8 +136,62 @@ document.addEventListener('DOMContentLoaded', () => {
   const hasEnoughSignal = (profile) =>
     sumValues(profile.categoryViews) + sumValues(profile.searchTerms) >= MIN_SIGNALS_FOR_AUTO_RECOMMEND;
 
+  const getNearbyDistance = (article, userHomeRegion) => {
+    const target = (userHomeRegion || 'Жетысуская область').toLowerCase();
+    const reg = (article.region || '').toLowerCase();
+    const loc = (article.locationName || '').toLowerCase();
+    const title = (article.title || '').toLowerCase();
+
+    const textToMatch = `${reg} ${loc} ${title}`;
+
+    // Direct match with home region / target region (e.g. "жетысуская", "жетысу", "талдыкорган")
+    if (
+      (target && textToMatch.includes(target)) ||
+      (textToMatch.includes('жетысу') || textToMatch.includes('жетису') || textToMatch.includes('талдыкорган'))
+    ) {
+      return 0;
+    }
+
+    // Tier 1: Neighboring regions to Zhetysu
+    const tier1 = ['алматинская', 'алматы', 'абайская', 'карагандинская', 'жамбылская'];
+    if (tier1.some((t) => textToMatch.includes(t))) {
+      return 1;
+    }
+
+    // Tier 2: Nearby East / Central / South regions
+    const tier2 = ['восточно-казахстанская', 'улытауская', 'туркестанская', 'шымкент', 'павлодарская'];
+    if (tier2.some((t) => textToMatch.includes(t))) {
+      return 2;
+    }
+
+    // Tier 3: Capital & North regions
+    const tier3 = ['астана', 'акмолинская', 'кызылординская', 'костанайская', 'северо-казахстанская'];
+    if (tier3.some((t) => textToMatch.includes(t))) {
+      return 3;
+    }
+
+    // Tier 4: West Kazakhstan
+    const tier4 = ['актюбинская', 'атырауская', 'мангистауская', 'западно-казахстанская'];
+    if (tier4.some((t) => textToMatch.includes(t))) {
+      return 4;
+    }
+
+    return 5;
+  };
+
   const sortArticles = (list) => {
     const sorted = [...list];
+    if (state.sort === 'nearby') {
+      const userObj = JSON.parse(localStorage.getItem('stepplify_user') || '{}');
+      const homeRegion = userObj.region || 'Жетысуская область';
+      sorted.sort((a, b) => {
+        const distA = getNearbyDistance(a, homeRegion);
+        const distB = getNearbyDistance(b, homeRegion);
+        if (distA !== distB) return distA - distB;
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      });
+      return sorted;
+    }
     if (state.sort === 'recommended') {
       const profile = window.stepplifyReading?.getProfile() || { categoryViews: {}, searchTerms: {}, viewedArticleIds: [] };
       return scoreArticles(sorted, profile)
@@ -222,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.query = '';
     setRegionFilter(null);
     if (searchInput) searchInput.value = '';
-    applySortSelection('new', { render: false });
+    applySortSelection('nearby', { render: false });
     renderCatalog();
   }
 
@@ -292,17 +346,6 @@ document.addEventListener('DOMContentLoaded', () => {
       window.openArticleModal?.(id);
     }
   });
-
-  // Auto-select "Рекомендуем для вас" as the starting view once there's
-  // enough signal to personalize responsibly — otherwise leave the
-  // HTML's own default ("Сначала новые") alone, so a first-time visitor
-  // isn't handed a seemingly-arbitrary order with no real signal behind
-  // it yet. (Explicitly picking "Сбросить фильтры" always goes back to
-  // "new" regardless — see resetFilters.)
-  const initialProfile = window.stepplifyReading?.getProfile();
-  if (initialProfile && hasEnoughSignal(initialProfile)) {
-    applySortSelection('recommended', { render: false });
-  }
 
   setRegionFilter(state.region);
   loadArticles();

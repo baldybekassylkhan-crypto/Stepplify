@@ -125,6 +125,7 @@ export const getAllArticles = async (req, res) => {
       region: a.region || (a.author ? a.author.region : null),
       views: a.viewsCount,
       viewsFormatted: formatViews(a.viewsCount),
+      verificationScore: a.verificationScore,
       images: JSON.parse(a.images || '[]'),
       locationName: a.locationName,
       createdAt: a.createdAt,
@@ -177,6 +178,7 @@ export const getRecentArticles = async (req, res) => {
         meta: a.author ? `${a.author.school} · ${a.author.grade}` : 'Студент',
         views: formatViews(a.viewsCount),
         viewsRaw: a.viewsCount,
+        verificationScore: a.verificationScore,
         images: JSON.parse(a.images || '[]'),
         locationName: a.locationName,
         createdAt: a.createdAt,
@@ -237,7 +239,15 @@ const buildRatingPayload = async (articleId, userId) => {
     prisma.rating.findMany({
       where: { articleId, text: { not: null } },
       orderBy: { updatedAt: 'desc' },
-      include: { user: { select: { fullName: true, school: true, grade: true } } },
+      include: {
+        user: { select: { id: true, fullName: true, school: true, grade: true, avatarUrl: true } },
+        replies: {
+          orderBy: { createdAt: 'asc' },
+          include: {
+            user: { select: { id: true, fullName: true, school: true, grade: true, avatarUrl: true } },
+          },
+        },
+      },
     }),
   ]);
 
@@ -251,11 +261,23 @@ const buildRatingPayload = async (articleId, userId) => {
     reviews: reviewRows
       .filter((r) => r.text && r.text.trim())
       .map((r) => ({
+        id: r.id,
+        userId: r.user.id,
         author: r.user.fullName,
+        avatarUrl: r.user.avatarUrl,
         meta: `${r.user.school} · ${r.user.grade}`,
         value: r.value,
         text: r.text,
         createdAt: r.updatedAt,
+        replies: (r.replies || []).map((reply) => ({
+          id: reply.id,
+          userId: reply.user.id,
+          author: reply.user.fullName,
+          avatarUrl: reply.user.avatarUrl,
+          meta: `${reply.user.school} · ${reply.user.grade}`,
+          text: reply.text,
+          createdAt: reply.createdAt,
+        })),
       })),
   };
 };
@@ -284,7 +306,12 @@ export const getArticleById = async (req, res) => {
       return res.status(404).json({ error: 'Статья не найдена.' });
     }
 
-    const { rating, reviews } = await buildRatingPayload(articleId, req.user ? req.user.id : null);
+    const { rating, reviews } = await buildRatingPayload(articleId, req.user ? (req.user.userId || req.user.id) : null);
+
+    const userId = req.user ? (req.user.userId || req.user.id) : null;
+    const isFavorite = userId
+      ? !!(await prisma.favorite.findUnique({ where: { userId_articleId: { userId, articleId } } }))
+      : false;
 
     return res.json({
       id: article.id,
@@ -301,7 +328,9 @@ export const getArticleById = async (req, res) => {
       geoLng: article.geoLng,
       views: article.viewsCount,
       viewsFormatted: formatViews(article.viewsCount),
+      verificationScore: article.verificationScore,
       createdAt: article.createdAt,
+      isFavorite,
       rating,
       reviews,
     });
@@ -452,9 +481,188 @@ export const deleteArticle = async (req, res) => {
       }
     }
 
-    return res.json({ message: 'Статья удалена.', id: articleId });
+    return res.json({ success: true, message: 'Статья успешно удалена.' });
   } catch (error) {
     console.error('Error in DeleteArticle:', error);
     return res.status(500).json({ error: 'Ошибка при удалении статьи.' });
+  }
+};
+
+// 9. ReplyToReview — add a reply to an existing review/rating without star ratings
+export const replyToReview = async (req, res) => {
+  try {
+    const articleId = parseInt(req.params.id);
+    const reviewId = parseInt(req.params.reviewId);
+    const text = String(req.body.text || '').trim().slice(0, 1000);
+
+    if (isNaN(articleId) || isNaN(reviewId)) {
+      return res.status(400).json({ error: 'Некорректный ID.' });
+    }
+    if (!text) {
+      return res.status(400).json({ error: 'Текст ответа не может быть пустым.' });
+    }
+
+    const rating = await prisma.rating.findUnique({
+      where: { id: reviewId },
+    });
+    if (!rating || rating.articleId !== articleId) {
+      return res.status(404).json({ error: 'Отзыв не найден.' });
+    }
+
+    await prisma.reviewReply.create({
+      data: {
+        ratingId: reviewId,
+        userId: req.user.id,
+        text,
+      },
+    });
+
+    return res.json(await buildRatingPayload(articleId, req.user.id));
+  } catch (error) {
+    console.error('Error in ReplyToReview:', error);
+    return res.status(500).json({ error: 'Ошибка при сохранении ответа на отзыв.' });
+  }
+};
+
+// 10. DeleteReview — delete the current user's rating (and all its replies)
+export const deleteReview = async (req, res) => {
+  try {
+    const articleId = parseInt(req.params.id);
+    if (isNaN(articleId)) {
+      return res.status(400).json({ error: 'Некорректный ID статьи.' });
+    }
+
+    const userInDb = req.user ? await prisma.user.findUnique({ where: { id: req.user.id }, select: { role: true } }) : null;
+    const userRole = userInDb ? userInDb.role : (req.user ? req.user.role : 'user');
+    const isMod = userRole === 'moderator' || userRole === 'admin';
+
+    // Moderators can delete any review on the article via ?userId= query param
+    let existing;
+    if (isMod && req.query.userId) {
+      const targetUserId = parseInt(req.query.userId);
+      existing = await prisma.rating.findUnique({
+        where: { articleId_userId: { articleId, userId: targetUserId } },
+      });
+    } else {
+      existing = await prisma.rating.findUnique({
+        where: { articleId_userId: { articleId, userId: req.user.id } },
+      });
+    }
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Отзыв не найден.' });
+    }
+
+    await prisma.rating.delete({ where: { id: existing.id } });
+
+    return res.json(await buildRatingPayload(articleId, req.user.id));
+  } catch (error) {
+    console.error('Error in DeleteReview:', error);
+    return res.status(500).json({ error: 'Ошибка при удалении отзыва.' });
+  }
+};
+
+// 11. DeleteReply — delete the current user's reply
+export const deleteReply = async (req, res) => {
+  try {
+    const articleId = parseInt(req.params.id);
+    const replyId = parseInt(req.params.replyId);
+    if (isNaN(articleId) || isNaN(replyId)) {
+      return res.status(400).json({ error: 'Некорректный ID.' });
+    }
+
+    const reply = await prisma.reviewReply.findUnique({
+      where: { id: replyId },
+      include: { rating: true },
+    });
+    if (!reply || reply.rating.articleId !== articleId) {
+      return res.status(404).json({ error: 'Ответ не найден.' });
+    }
+    if (reply.userId !== req.user.id) {
+      const userInDb = req.user ? await prisma.user.findUnique({ where: { id: req.user.id }, select: { role: true } }) : null;
+      const userRole = userInDb ? userInDb.role : (req.user ? req.user.role : 'user');
+      const isMod = userRole === 'moderator' || userRole === 'admin';
+      if (!isMod) {
+        return res.status(403).json({ error: 'Можно удалить только свой ответ.' });
+      }
+    }
+
+    await prisma.reviewReply.delete({ where: { id: replyId } });
+
+    return res.json(await buildRatingPayload(articleId, req.user.id));
+  } catch (error) {
+    console.error('Error in DeleteReply:', error);
+    return res.status(500).json({ error: 'Ошибка при удалении ответа.' });
+  }
+};
+
+// 12. EditReply — update the text of the current user's reply
+export const editReply = async (req, res) => {
+  try {
+    const articleId = parseInt(req.params.id);
+    const replyId = parseInt(req.params.replyId);
+    const text = String(req.body.text || '').trim().slice(0, 1000);
+
+    if (isNaN(articleId) || isNaN(replyId)) {
+      return res.status(400).json({ error: 'Некорректный ID.' });
+    }
+    if (!text) {
+      return res.status(400).json({ error: 'Текст ответа не может быть пустым.' });
+    }
+
+    const reply = await prisma.reviewReply.findUnique({
+      where: { id: replyId },
+      include: { rating: true },
+    });
+    if (!reply || reply.rating.articleId !== articleId) {
+      return res.status(404).json({ error: 'Ответ не найден.' });
+    }
+    if (reply.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Можно редактировать только свой ответ.' });
+    }
+
+    await prisma.reviewReply.update({
+      where: { id: replyId },
+      data: { text },
+    });
+
+    return res.json(await buildRatingPayload(articleId, req.user.id));
+  } catch (error) {
+    console.error('Error in EditReply:', error);
+    return res.status(500).json({ error: 'Ошибка при редактировании ответа.' });
+  }
+};
+
+// 13. UpdateVerificationScore — moderator sets accuracy verification score (0-100%)
+export const updateVerificationScore = async (req, res) => {
+  try {
+    const articleId = parseInt(req.params.id);
+    const score = parseInt(req.body.score);
+
+    if (isNaN(articleId) || isNaN(score) || score < 0 || score > 100) {
+      return res.status(400).json({ error: 'Укажите процент достоверности от 0 до 100.' });
+    }
+
+    const userInDb = req.user ? await prisma.user.findUnique({ where: { id: req.user.id }, select: { role: true } }) : null;
+    const userRole = userInDb ? userInDb.role : (req.user ? req.user.role : 'user');
+    const isMod = userRole === 'moderator' || userRole === 'admin';
+
+    if (!isMod) {
+      return res.status(403).json({ error: 'Только модераторы могут оценивать достоверность статьи.' });
+    }
+
+    const updated = await prisma.article.update({
+      where: { id: articleId },
+      data: { verificationScore: score },
+      select: { id: true, verificationScore: true },
+    });
+
+    return res.json({
+      message: 'Оценка достоверности статьи успешно обновлена!',
+      verificationScore: updated.verificationScore,
+    });
+  } catch (error) {
+    console.error('Error in UpdateVerificationScore:', error);
+    return res.status(500).json({ error: 'Ошибка при обновлении оценки достоверности.' });
   }
 };
