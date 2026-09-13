@@ -41,6 +41,7 @@ export const registerUser = async (req, res) => {
         grade,
         points: initialPoints,
         level: initialLevel,
+        role: email === 'baldybekassylkhan@gmail.com' ? 'admin' : 'user',
         pointLogs: {
           create: {
             points: initialPoints,
@@ -90,7 +91,10 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ error: 'Укажите email и пароль.' });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    let user = await prisma.user.findUnique({ where: { email } });
+    if (user && user.email === 'baldybekassylkhan@gmail.com' && user.role !== 'admin') {
+      user = await prisma.user.update({ where: { id: user.id }, data: { role: 'admin' } });
+    }
     if (!user) {
       return res.status(401).json({ error: 'Неверный email или пароль.' });
     }
