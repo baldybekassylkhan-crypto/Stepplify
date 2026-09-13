@@ -1,0 +1,1 @@
+const fs = require('fs'); ['index.html', 'catalog.html', 'map.html', '404.html'].forEach(file => { if (fs.existsSync(file)) { let content = fs.readFileSync(file, 'utf8'); content = content.replace(/<span class="brand-name">Stepplify<\/span>/g, '<span class="brand-name notranslate" translate="no">Stepplify</span>'); fs.writeFileSync(file, content); } });
