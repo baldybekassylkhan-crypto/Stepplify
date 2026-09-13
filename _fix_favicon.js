@@ -1,0 +1,1 @@
+const fs = require('fs'); ['index.html', 'catalog.html', 'map.html', '404.html'].forEach(file => { if (fs.existsSync(file)) { let html = fs.readFileSync(file, 'utf8'); if (!html.includes('<link rel="icon"')) { html = html.replace('</title>', '</title>\n<link rel="icon" type="image/png" href="assets/logo-icon.png" />'); fs.writeFileSync(file, html); } } });
