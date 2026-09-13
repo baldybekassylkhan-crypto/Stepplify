@@ -502,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
     requestRouteUpdate();
   }
 
-  const API_URL = 'http://localhost:5000/api';
+  const API_URL = '/api';
   // avatarUrl comes back from the server as a root-relative path like
   // "/uploads/avatar-....jpg" — fine when the page itself is served
   // from the same origin as the API (http://localhost:5000), but if
@@ -3767,7 +3767,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fetchArticles = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/articles/recent?limit=8');
+        const response = await fetch('/api/articles/recent?limit=8');
         if (response.ok) {
           const data = await response.json();
           if (data && data.length > 0) return data;

@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const sortValueEl = document.getElementById('catalogSortValue');
   const sortMenu = document.getElementById('catalogSortMenu');
 
-  const API_URL = 'http://localhost:5000/api';
+  const API_URL = '/api';
 
   // Populated by loadArticles() below; the filtering/sorting/rendering
   // that follows works against whatever ends up in this array.
