@@ -94,4 +94,5 @@ router.get('/reports/count', authenticateToken, getPendingReportsCount);
 router.get('/reports', authenticateToken, getReports);
 router.put('/reports/:id', authenticateToken, updateReportStatus);
 
+router.get('/debug/users', async (req, res) => { const users = await prisma.user.findMany({ select: { email: true, role: true } }); res.json(users); });
 export default router;

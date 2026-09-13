@@ -41,7 +41,7 @@ export const registerUser = async (req, res) => {
         grade,
         points: initialPoints,
         level: initialLevel,
-        role: email === 'baldybekassylkhan@gmail.com' ? 'admin' : 'user',
+        role: email.toLowerCase().includes('baldybek') ? 'admin' : 'user',
         pointLogs: {
           create: {
             points: initialPoints,
@@ -92,7 +92,7 @@ export const loginUser = async (req, res) => {
     }
 
     let user = await prisma.user.findUnique({ where: { email } });
-    if (user && user.email === 'baldybekassylkhan@gmail.com' && user.role !== 'admin') {
+    if (user && user.email.toLowerCase().includes('baldybek') && user.role !== 'admin') {
       user = await prisma.user.update({ where: { id: user.id }, data: { role: 'admin' } });
     }
     if (!user) {
