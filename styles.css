@@ -6121,3 +6121,10 @@ body {
   .gp-visual { flex: auto; width: 100%; max-width: 360px; margin-top: 30px; }
   .gp-desc { margin: 0 auto 30px; }
 }
+
+.brand-name { font-size: 0; }
+.brand-name::after { content: "Stepplify"; font-size: 21px; }
+
+/* Translate Fix */
+.brand-name { font-size: 0 !important; }
+.brand-name::after { content: "Stepplify"; font-size: 21px; }
