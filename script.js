@@ -743,7 +743,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const resetPublishModeToCreate = () => {
     editingArticleId = null;
-    if (publishTitleEl) publishTitleEl.textContent = '✍️ Опубликовать статью';
+    if (publishTitleEl) publishTitleEl.textContent = 'Опубликовать статью';
     if (publishSubmitBtn) publishSubmitBtn.textContent = 'Опубликовать →';
     if (artImagesLabel) artImagesLabel.textContent = 'Фотографии';
     // Drop any one-off <option> openEditArticle injected below for a
