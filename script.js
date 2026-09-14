@@ -766,6 +766,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('publishForm').reset();
     publishOverlay.classList.add('open');
     publishOverlay.setAttribute('aria-hidden', 'false');
+    if (typeof updateWordCounter === 'function') updateWordCounter();
   };
 
   // Opened from the article reader's "Редактировать" button — server
@@ -803,6 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     publishOverlay.classList.add('open');
     publishOverlay.setAttribute('aria-hidden', 'false');
+    if (typeof updateWordCounter === 'function') updateWordCounter();
   };
 
   document.getElementById('publishBtn')?.addEventListener('click', openPublish);
@@ -833,11 +835,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const artContentEl = document.getElementById('artContent');
   let aiCheckBlocksPublish = false;
 
-  // Any edit after a check invalidates that check's verdict — force a
+  const getWordCount = (str) => str.trim().split(/\s+/).filter(w => w.length > 0).length;
+  const updateWordCounter = () => {
+    const counter = document.getElementById('artContentCounter');
+    if (counter && artContentEl) {
+      const words = getWordCount(artContentEl.value);
+      counter.textContent = `${words} / 1000 слов (мин. 500)`;
+      counter.style.color = (words < 500 || words > 1000) ? '#ff6b6b' : 'rgba(255,255,255,0.5)';
+    }
+  };
+
+  // Any edit after a check invalidates that check's verdict - force a
   // fresh review rather than trusting a stale "clean" result.
   artContentEl?.addEventListener('input', () => {
     aiCheckBlocksPublish = false;
     if (aiResultBox) aiResultBox.hidden = true;
+    updateWordCounter();
   });
 
   // Word-level diff (classic LCS-based alignment) so "what the AI changed"
@@ -948,8 +961,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Publish form submit
   document.getElementById('publishForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const currentWords = getWordCount(artContentEl.value);
+    if (currentWords < 500) {
+      document.getElementById('publishError').textContent = 'Статья слишком короткая (минимум 500 слов). Сейчас: ' + currentWords;
+      return;
+    }
+    if (currentWords > 1000) {
+      document.getElementById('publishError').textContent = 'Статья слишком длинная (максимум 1000 слов). Сейчас: ' + currentWords;
+      return;
+    }
     if (aiCheckBlocksPublish) {
-      document.getElementById('publishError').textContent = 'Уберите нецензурную лексику из текста и нажмите «Автопроверка» ещё раз перед публикацией.';
+      document.getElementById('publishError').textContent = 'В статье присутствуют недопустимые слова. Пожалуйста, отредактируйте текст перед публикацией.';
       return;
     }
     const isEditing = editingArticleId !== null;
