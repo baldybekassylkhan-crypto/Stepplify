@@ -50,6 +50,21 @@ document.addEventListener('DOMContentLoaded', () => {
           const checkTranslated = () => {
             if (document.documentElement.classList.contains('translated-ltr') || document.documentElement.classList.contains('translated-rtl')) {
               document.documentElement.style.opacity = '1';
+              // Force replace specific Kazakh mistranslations
+              if (langCode === 'kaz') {
+                const replaceText = () => {
+                  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+                  let node;
+                  while (node = walker.nextNode()) {
+                    if (node.nodeValue.includes('жарысқа қосылыңыз') || node.nodeValue.includes('Жарысқа қосылыңыз')) {
+                      node.nodeValue = node.nodeValue.replace(/Жарысқа қосылыңыз/g, 'Жарысқа қосылу').replace(/жарысқа қосылыңыз/g, 'жарысқа қосылу');
+                    }
+                  }
+                };
+                replaceText();
+                // Also observe for future changes by Google Translate
+                new MutationObserver(replaceText).observe(document.body, { childList: true, subtree: true, characterData: true });
+              }
             } else {
               setTimeout(checkTranslated, 50);
             }
