@@ -344,7 +344,7 @@
       <div class="ai-check-result" id="aiCheckResult" hidden></div>
       <label class="publish-terms-row" for="publishTermsCheck">
         <input type="checkbox" id="publishTermsCheck" />
-        <span>Я согласен с <a href="#" class="publish-terms-link" id="termsOpenLink" onclick="openTermsModal();return false;">условиями использования</a> и <a href="#" class="publish-terms-link" onclick="openTermsModal();return false;">политикой публикации</a> сайта</span>
+        <span>Я согласен с <a href="#" class="publish-terms-link" id="termsOpenLink" onclick="event.stopPropagation();openTermsModal();return false;">условиями использования</a> и <a href="#" class="publish-terms-link" onclick="event.stopPropagation();openTermsModal();return false;">политикой публикации</a> сайта</span>
       </label>
       <div class="publish-ai-row">
         <button type="button" class="auth-submit ai-btn" id="aiCheckBtn">Автопроверка</button>
