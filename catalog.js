@@ -211,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const renderCard = (a) => {
     const hasVerification = a.verificationScore !== null && a.verificationScore !== undefined;
     const scoreVal = hasVerification ? a.verificationScore : 0;
-    const scoreText = hasVerification ? `${a.verificationScore}%` : '<span style="color:var(--text-muted); font-size:0.75rem;">Ещё не проверено</span>';
+    const scoreText = hasVerification ? `${a.verificationScore}%` : '<span style="color: rgba(255,255,255,0.45); font-style: italic; font-weight: normal; font-size: 0.75rem;">Ещё не проверено</span>';
     return `
     <article class="article-card catalog-card" data-id="${a.id}">
       <h3>${escapeHtml(a.title)}</h3>
