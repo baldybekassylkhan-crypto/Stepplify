@@ -59,6 +59,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (node.nodeValue.includes('жарысқа қосылыңыз') || node.nodeValue.includes('Жарысқа қосылыңыз')) {
                       node.nodeValue = node.nodeValue.replace(/Жарысқа қосылыңыз/g, 'Жарысқа қосылу').replace(/жарысқа қосылыңыз/g, 'жарысқа қосылу');
                     }
+                    if (node.nodeValue.includes('Төмен бұрылыңыз, сонда киіз үй айналады')) {
+                      node.nodeValue = node.nodeValue.replace(/Төмен бұрылыңыз, сонда киіз үй айналады/g, 'киіз үйді айналдыру үшін төменге түсіңіз');
+                    }
                   }
                 };
                 replaceText();
