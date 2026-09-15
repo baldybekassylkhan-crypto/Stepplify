@@ -3156,10 +3156,58 @@ body.map-page {
    full-width solid-red .auth-submit style, stacked one per line —
    this puts them side by side and gives the AI check a quieter,
    secondary look so the primary publish action still stands out. */
+/* Terms & policy checkbox row above the publish button */
+.publish-terms-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin-top: 1.1rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.45;
+  user-select: none;
+}
+.publish-terms-row input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.2s, background 0.2s;
+}
+.publish-terms-row input[type="checkbox"]:checked {
+  background: var(--accent, #8a1f2b);
+  border-color: var(--accent, #8a1f2b);
+}
+.publish-terms-row input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0px;
+  width: 5px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+.publish-terms-link {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .publish-ai-row {
   display: flex;
   gap: 0.8rem;
-  margin-top: 1.3rem;
+  margin-top: 1rem;
 }
 .publish-ai-row .auth-submit {
   width: auto;

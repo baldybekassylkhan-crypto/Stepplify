@@ -756,6 +756,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const publishTitleEl   = document.getElementById('publishModalTitle');
   const publishSubmitBtn = document.getElementById('publishSubmitBtn');
   const artImagesLabel   = document.querySelector('label[for="artImages"]');
+  const publishTermsCheck = document.getElementById('publishTermsCheck');
+
+  // Keep the submit button locked until the terms checkbox is ticked.
+  const syncPublishBtn = () => {
+    if (!publishSubmitBtn) return;
+    const agreed = publishTermsCheck?.checked;
+    publishSubmitBtn.disabled = !agreed;
+    publishSubmitBtn.style.opacity = agreed ? '' : '0.45';
+    publishSubmitBtn.style.cursor  = agreed ? '' : 'not-allowed';
+  };
+  if (publishTermsCheck) {
+    publishTermsCheck.addEventListener('change', syncPublishBtn);
+    syncPublishBtn(); // apply on load
+  }
 
   let editingArticleId = null;
 
@@ -764,6 +778,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (publishTitleEl) publishTitleEl.textContent = 'Опубликовать статью';
     if (publishSubmitBtn) publishSubmitBtn.textContent = 'Опубликовать →';
     if (artImagesLabel) artImagesLabel.textContent = 'Фотографии';
+    // Reset terms checkbox and button state when modal opens fresh
+    if (publishTermsCheck) { publishTermsCheck.checked = false; syncPublishBtn(); }
     // Drop any one-off <option> openEditArticle injected below for a
     // legacy region value that didn't match the fixed list — keeps the
     // dropdown clean for publishing a brand-new article.
