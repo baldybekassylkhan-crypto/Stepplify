@@ -2023,8 +2023,9 @@ body.map-page {
   height: 100%;
   overflow: visible;
   transform-style: preserve-3d;
-  /* No CSS transition here on purpose — script.js drives the tilt
-     through a requestAnimationFrame loop that eases toward the pointer
+  /* One soft ambient shadow lifts the entire map off the dark panel. */
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.45));
+  /* No CSS transition here on purpose - script.js drives the tilt
      every frame, which reads far smoother than a CSS transition
      restarting from scratch on every single mousemove tick. */
   will-change: transform;
@@ -2038,8 +2039,6 @@ body.map-page {
   cursor: pointer;
   transform-box: fill-box;
   transform-origin: center;
-  /* One soft ambient shadow lifts each region off the dark panel. */
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
   /* Own compositor layer so the hover pop is handled by the GPU instead
      of being repainted alongside the parent SVG's per-frame tilt
      rotation (see the rAF loop in script.js) — without this the two
