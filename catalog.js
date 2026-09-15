@@ -208,15 +208,29 @@ document.addEventListener('DOMContentLoaded', () => {
     return sorted;
   };
 
-  const renderCard = (a) => `
+  const renderCard = (a) => {
+    const hasVerification = a.verificationScore !== null && a.verificationScore !== undefined;
+    const scoreVal = hasVerification ? a.verificationScore : 0;
+    const scoreText = hasVerification ? `${a.verificationScore}%` : '<span style="color:var(--text-muted); font-size:0.75rem;">Ещё не проверено</span>';
+    return `
     <article class="article-card catalog-card" data-id="${a.id}">
       <h3>${escapeHtml(a.title)}</h3>
       <div class="article-author">${escapeHtml(a.author)}</div>
-      <div class="article-meta">
+      <div class="article-meta" style="margin-bottom: 12px;">
         <span>${escapeHtml(a.meta || a.locationName || '')}</span>
         <span>👁 ${escapeHtml(a.viewsFormatted ?? a.views ?? 0)}</span>
       </div>
+      <div class="article-verification-badge" style="margin: 0; padding: 8px 10px;">
+        <div class="verification-badge-header" style="margin-bottom: 6px;">
+          <span class="verification-badge-label" style="font-size: 0.75rem;">Проверка:</span>
+          <span class="verification-badge-value" style="font-size: 0.75rem;">${scoreText}</span>
+        </div>
+        <div class="verification-progress-track" style="height: 4px;">
+          <div class="verification-progress-fill" style="width: ${hasVerification ? scoreVal : 0}%"></div>
+        </div>
+      </div>
     </article>`;
+  };
 
   // No publish button in the "no articles at all" case — the toolbar
   // right above the grid already has one, and repeating it here just
