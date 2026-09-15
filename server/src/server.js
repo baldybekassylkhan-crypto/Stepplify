@@ -21,7 +21,8 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static files for uploaded images
-const uploadsPath = path.join(__dirname, '../uploads');
+const isRailwayData = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('/data/');
+const uploadsPath = isRailwayData ? '/data/uploads' : path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsPath));
 
 // Static files for frontend (Stepplify root).

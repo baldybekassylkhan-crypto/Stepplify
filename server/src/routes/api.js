@@ -19,7 +19,8 @@ const router = express.Router();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const uploadsDir = path.join(__dirname, '../../uploads');
+const isRailwayData = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('/data/');
+const uploadsDir = isRailwayData ? '/data/uploads' : path.join(__dirname, '../../uploads');
 
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -57,7 +58,7 @@ router.post('/users/avatar', authenticateToken, upload.single('avatar'), updateA
 router.get('/users/search', authenticateToken, searchUsers);
 router.put('/users/:id/role', authenticateToken, updateUserRole);
 
-router.post('/articles', authenticateToken, upload.array('images', 5), createArticle);
+router.post('/articles', authenticateToken, upload.array('images', 3), createArticle);
 router.get('/articles', getAllArticles);
 router.get('/articles/recent', getRecentArticles);
 router.post('/articles/:id/view', incrementViews);
@@ -69,7 +70,7 @@ router.put('/articles/:id/replies/:replyId', authenticateToken, editReply);
 router.put('/articles/:id/verification', authenticateToken, updateVerificationScore);
 router.post('/articles/:id/favorite', authenticateToken, toggleFavorite);
 router.get('/favorites', authenticateToken, getUserFavorites);
-router.put('/articles/:id', authenticateToken, upload.array('images', 5), updateArticle);
+router.put('/articles/:id', authenticateToken, upload.array('images', 3), updateArticle);
 router.delete('/articles/:id', authenticateToken, deleteArticle);
 router.get('/articles/:id', optionalAuth, getArticleById);
 

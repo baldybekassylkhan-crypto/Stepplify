@@ -987,6 +987,10 @@ document.addEventListener('DOMContentLoaded', () => {
       fd.append('region',   document.getElementById('artRegion').value);
       fd.append('locationName', document.getElementById('artLocation').value);
       const files = document.getElementById('artImages').files;
+      if (files.length > 3) {
+        document.getElementById('publishError').textContent = 'Можно прикрепить максимум 3 фотографии.';
+        return;
+      }
       for (const f of files) fd.append('images', f);
 
       const res = await fetch(
