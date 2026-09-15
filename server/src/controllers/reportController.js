@@ -30,7 +30,7 @@ export const createReport = async (req, res) => {
 export const getReports = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-    if (!user || user.role !== 'moderator') {
+    if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -77,7 +77,7 @@ export const getReports = async (req, res) => {
 export const updateReportStatus = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-    if (!user || user.role !== 'moderator') {
+    if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -99,7 +99,7 @@ export const updateReportStatus = async (req, res) => {
 export const getPendingReportsCount = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-    if (!user || user.role !== 'moderator') {
+    if (!user || (user.role !== 'moderator' && user.role !== 'admin')) {
       return res.status(403).json({ error: 'Forbidden' });
     }
     const count = await prisma.report.count({

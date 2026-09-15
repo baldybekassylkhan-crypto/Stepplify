@@ -280,12 +280,12 @@ export const updateUserRole = async (req, res) => {
     const { id } = req.params;
     const { role } = req.body;
     
-    // Verify requester is a moderator
-    if (req.user.role !== 'moderator') {
+    // Verify requester is a moderator or admin
+    if (req.user.role !== 'moderator' && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    if (!['user', 'moderator'].includes(role)) {
+    if (!['user', 'moderator', 'admin'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
