@@ -138,8 +138,7 @@ function normalizeParsed(parsed, rawContent, draftText) {
 // `thought: true` followed by the real answer — so we drop thought parts
 // before concatenating.
 async function callGemini(draftText, apiKey) {
-  let model = process.env.GEMINI_MODEL || 'gemini-1.5-flash-latest';
-  if (model.includes('gemma') || model === 'gemini-1.5-flash') model = 'gemini-1.5-flash-latest';
+  let model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
   const response = await axios.post(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
