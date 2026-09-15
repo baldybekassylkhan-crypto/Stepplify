@@ -962,9 +962,10 @@ body.map-page {
   left: 27%;
   top: 48%;
   width: min(900px, 80vw);
-  aspect-ratio: 1;
+  height: min(900px, 80vw);
+  border-radius: 50%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(226, 172, 86, 0.3) 0%, rgba(226, 172, 86, 0.13) 40%, rgba(226, 172, 86, 0) 68%);
+  background: radial-gradient(circle, rgba(226, 172, 86, 0.3) 0%, rgba(226, 172, 86, 0.13) 30%, rgba(226, 172, 86, 0) 70%);
   animation: yurt-sun-breathe 15s ease-in-out infinite alternate;
   /* Sets with the day — the moon takes over from here. */
   opacity: calc(1 - var(--night, 0));
