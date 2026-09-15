@@ -4215,3 +4215,38 @@ window.revokeModRights = async (userId) => {
     console.error(e);
   }
 };
+
+/* ============================================================
+   Terms of Use Modal
+   ============================================================ */
+window.openTermsModal = () => {
+  const overlay = document.getElementById('termsOverlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+
+  const closeBtn  = document.getElementById('termsClose');
+  const acceptBtn = document.getElementById('termsAcceptBtn');
+
+  const closeTerms = () => {
+    overlay.style.display = 'none';
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  };
+
+  const acceptTerms = () => {
+    const check = document.getElementById('publishTermsCheck');
+    if (check) { check.checked = true; check.dispatchEvent(new Event('change')); }
+    closeTerms();
+  };
+
+  if (closeBtn)  closeBtn.onclick  = closeTerms;
+  if (acceptBtn) acceptBtn.onclick = acceptTerms;
+
+  overlay.onclick = (e) => { if (e.target === overlay) closeTerms(); };
+
+  document.addEventListener('keydown', function escHandler(e) {
+    if (e.key === 'Escape') { closeTerms(); document.removeEventListener('keydown', escHandler); }
+  });
+};
