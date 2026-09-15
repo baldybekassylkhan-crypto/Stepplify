@@ -1039,25 +1039,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const track = document.getElementById('marqueeTrack');
         if (track && freshArticles.length) {
           const renderCard = (a) => {
-            const hasVerification = a.verificationScore !== null && a.verificationScore !== undefined;
-            const scoreVal = hasVerification ? a.verificationScore : 0;
-            const scoreText = hasVerification ? `${a.verificationScore}%` : '<span style="color: rgba(255,255,255,0.45); font-style: italic; font-weight: normal; font-size: 0.75rem;">Ещё не проверено</span>';
             return `
             <article class="article-card" data-id="${a.id}">
               <h3>${a.title}</h3>
               <div class="article-author">${a.author}</div>
-              <div class="article-meta" style="margin-bottom: 12px;">
+              <div class="article-meta">
                 <span>${a.meta}</span>
-                <span>👁 ${a.views}</span>
-              </div>
-              <div class="article-verification-badge" style="margin: 0; padding: 8px 10px;">
-                <div class="verification-badge-header" style="margin-bottom: 6px;">
-                  <span class="verification-badge-label" style="font-size: 0.75rem;">Проверка:</span>
-                  <span class="verification-badge-value" style="font-size: 0.75rem;">${scoreText}</span>
-                </div>
-                <div class="verification-progress-track" style="height: 4px;">
-                  <div class="verification-progress-fill" style="width: ${hasVerification ? scoreVal : 0}%"></div>
-                </div>
+                <span>👀 ${a.views}</span>
               </div>
             </article>`;
           };
@@ -3818,25 +3806,13 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     const renderCard = (a) => {
-      const hasVerification = a.verificationScore !== null && a.verificationScore !== undefined;
-      const scoreVal = hasVerification ? a.verificationScore : 0;
-      const scoreText = hasVerification ? `${a.verificationScore}%` : '<span style="color: rgba(255,255,255,0.45); font-style: italic; font-weight: normal; font-size: 0.75rem;">Ещё не проверено</span>';
       return `
       <article class="article-card" data-id="${a.id ?? ''}">
         <h3>${a.title}</h3>
         <div class="article-author">${a.author}</div>
-        <div class="article-meta" style="margin-bottom: 12px;">
+        <div class="article-meta">
           <span>${a.meta}</span>
-          <span>👁 ${a.views}</span>
-        </div>
-        <div class="article-verification-badge" style="margin: 0; padding: 8px 10px;">
-          <div class="verification-badge-header" style="margin-bottom: 6px;">
-            <span class="verification-badge-label" style="font-size: 0.75rem;">Проверка:</span>
-            <span class="verification-badge-value" style="font-size: 0.75rem;">${scoreText}</span>
-          </div>
-          <div class="verification-progress-track" style="height: 4px;">
-            <div class="verification-progress-fill" style="width: ${hasVerification ? scoreVal : 0}%"></div>
-          </div>
+          <span>👀 ${a.views}</span>
         </div>
       </article>`;
     };
