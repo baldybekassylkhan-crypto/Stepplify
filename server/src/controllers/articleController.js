@@ -1,4 +1,7 @@
 import prisma from '../db.js';
+import path from 'path';
+import fs from 'fs';
+import { checkImageOriginality } from './aiController.js';
 
 // Helper to format view numbers like 512, 1.2K, 3.4M
 const formatViews = (views) => {
@@ -81,10 +84,39 @@ export const createArticle = async (req, res) => {
       article: {
         ...newArticle,
         images: imagePaths,
+        imageOriginality: [],
         authorMeta: `${newArticle.author.school} · ${newArticle.author.grade}`,
         viewsFormatted: '0',
       },
     });
+
+    // ── Background: check each image for originality (non-blocking) ──────────
+    // Runs AFTER the response is sent so publish is never slowed down.
+    if (imagePaths.length > 0) {
+      const isRailwayData = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('/data/');
+      const uploadsBase = isRailwayData ? '/data/uploads' : path.join(path.dirname(new URL(import.meta.url).pathname), '../../uploads');
+
+      (async () => {
+        try {
+          const results = await Promise.all(
+            imagePaths.map(async (urlPath) => {
+              const filename = path.basename(urlPath);
+              const absPath = path.join(uploadsBase, filename);
+              if (!fs.existsSync(absPath)) return { url: urlPath, isOriginal: null, confidence: 'low', reason: 'Файл не найден' };
+              const check = await checkImageOriginality(absPath);
+              return { url: urlPath, ...check };
+            })
+          );
+          await prisma.article.update({
+            where: { id: newArticle.id },
+            data: { imageOriginality: JSON.stringify(results) },
+          });
+          console.log(`Image originality check done for article #${newArticle.id}`);
+        } catch (e) {
+          console.error('Background image check failed:', e.message);
+        }
+      })();
+    }
   } catch (error) {
     console.error('Error in CreateArticle:', error);
     return res.status(500).json({ error: 'Ошибка при создании статьи.' });
@@ -323,6 +355,7 @@ export const getArticleById = async (req, res) => {
       meta: article.author ? `${article.author.school} · ${article.author.grade}` : 'Студент',
       region: article.region || (article.author ? article.author.region : null),
       images: JSON.parse(article.images || '[]'),
+      imageOriginality: JSON.parse(article.imageOriginality || '[]'),
       locationName: article.locationName,
       geoLat: article.geoLat,
       geoLng: article.geoLng,

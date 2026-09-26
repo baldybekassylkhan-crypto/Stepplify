@@ -235,3 +235,68 @@ export const aiEditDraft = async (req, res) => {
     });
   }
 };
+
+// ─── Image Originality Check ────────────────────────────────────────────────
+// Analyses a single on-disk image via Gemini Vision and returns:
+//   { isOriginal: boolean, confidence: 'high'|'medium'|'low', reason: string }
+// Called from articleController after images are saved — runs in the background
+// so it never blocks the publish response.
+import fs from 'fs';
+import path from 'path';
+
+export const checkImageOriginality = async (absoluteImagePath) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return { isOriginal: null, confidence: 'low', reason: 'API ключ не настроен' };
+
+  try {
+    const imageBuffer = fs.readFileSync(absoluteImagePath);
+    const base64Image = imageBuffer.toString('base64');
+    const ext = path.extname(absoluteImagePath).toLowerCase().replace('.', '');
+    const mimeType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
+      : ext === 'png' ? 'image/png'
+      : ext === 'webp' ? 'image/webp'
+      : ext === 'gif' ? 'image/gif'
+      : 'image/jpeg';
+
+    const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const prompt = `Analyse this image and determine if it looks like an ORIGINAL personal photograph taken by an amateur (student, hiker, tourist) OR a stock photo / well-known internet image / professional photo likely found on many websites.
+
+Answer ONLY with a valid JSON object (no markdown):
+{
+  "isOriginal": true | false,
+  "confidence": "high" | "medium" | "low",
+  "reason": "brief explanation in Russian (max 15 words)"
+}
+
+Rules:
+- isOriginal = true: looks like a personal snapshot, amateur photo, unique perspective, local/regional scene with no famous landmarks recognizable as stock
+- isOriginal = false: looks like a stock photo (perfect lighting, watermark style, very professional composition of a famous landmark), meme, screenshot, or obvious internet image
+- confidence: how confident you are
+- reason: short explanation in Russian`;
+
+    const response = await axios.post(url, {
+      contents: [
+        {
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: mimeType, data: base64Image } },
+          ],
+        },
+      ],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.1 },
+    }, { timeout: 30000 });
+
+    const raw = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const result = JSON.parse(raw);
+    return {
+      isOriginal: result.isOriginal ?? null,
+      confidence: result.confidence || 'low',
+      reason: result.reason || 'Анализ завершён',
+    };
+  } catch (err) {
+    console.error('checkImageOriginality error:', err.message);
+    return { isOriginal: null, confidence: 'low', reason: 'Не удалось проверить' };
+  }
+};

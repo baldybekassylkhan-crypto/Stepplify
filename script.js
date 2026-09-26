@@ -1598,8 +1598,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const renderArticleReader = (a) => {
     const images = Array.isArray(a.images) ? a.images : [];
+    const originality = Array.isArray(a.imageOriginality) ? a.imageOriginality : [];
+
     const gallery = images.length
-      ? `<div class="article-reader-gallery">${images.map((src) => `<img src="${src}" alt="" loading="lazy" />`).join('')}</div>`
+      ? `<div class="article-reader-gallery">${images.map((src, i) => {
+          const info = originality.find(o => o.url === src) || originality[i] || null;
+          let badge = '';
+          if (info && info.isOriginal === true) {
+            badge = `<div class="img-originality-badge img-originality-original">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm3.28 5.78-3.75 3.75a.75.75 0 0 1-1.06 0l-1.75-1.75a.75.75 0 1 1 1.06-1.06l1.22 1.22 3.22-3.22a.75.75 0 1 1 1.06 1.06z"/></svg>
+              Оригинальное фото
+            </div>`;
+          } else if (info && info.isOriginal === false) {
+            badge = `<div class="img-originality-badge img-originality-notoriginal" title="${info.reason || ''}">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM7.25 4.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5zm.75 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>
+              Возможно не оригинальное
+            </div>`;
+          } else {
+            badge = `<div class="img-originality-badge img-originality-pending">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 3.5a.75.75 0 0 1 .75.75v3.5l2 1.15a.75.75 0 1 1-.75 1.3L7.5 9.5a.75.75 0 0 1-.75-.75V5.25A.75.75 0 0 1 8 4.5z"/></svg>
+              Проверяется...
+            </div>`;
+          }
+          return `<div class="img-originality-wrap"><img src="${src}" alt="" loading="lazy" />${badge}</div>`;
+        }).join('')}</div>`
       : '';
     const metaLine = [a.meta, a.region, a.locationName].filter(Boolean).join(' · ');
     const cachedUser = JSON.parse(localStorage.getItem('stepplify_user') || 'null');

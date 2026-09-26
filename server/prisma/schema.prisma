@@ -60,6 +60,7 @@ model Article {
   category     String
   region       String?
   images       String     @default("[]")
+  imageOriginality String  @default("[]")
   geoLat       Float?
   geoLng       Float?
   locationName String?
