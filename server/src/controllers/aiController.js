@@ -249,6 +249,11 @@ export const checkImageOriginality = async (absoluteImagePath) => {
   if (!apiKey) return { isOriginal: null, confidence: 'low', reason: 'API ключ не настроен' };
 
   try {
+    if (!fs.existsSync(absoluteImagePath)) {
+      console.warn('[AI] Image file does not exist on disk:', absoluteImagePath);
+      return { isOriginal: null, confidence: 'low', reason: 'Файл не найден' };
+    }
+
     const imageBuffer = fs.readFileSync(absoluteImagePath);
     const base64Image = imageBuffer.toString('base64');
     const ext = path.extname(absoluteImagePath).toLowerCase().replace('.', '');
@@ -258,24 +263,14 @@ export const checkImageOriginality = async (absoluteImagePath) => {
       : ext === 'gif' ? 'image/gif'
       : 'image/jpeg';
 
-    // gemini-2.5-flash: vision-capable, higher rate limits than lite-image models
-    const model = 'gemini-2.5-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const prompt = `Определи, является ли данная фотография оригинальной (авторской, снятой самим пользователем/учеником на камеру или телефон) или это изображение взято из интернета / стока / чужой общедоступной публикации.
 
-    const prompt = `Analyse this image and determine if it looks like an ORIGINAL personal photograph taken by an amateur (student, hiker, tourist) OR a stock photo / well-known internet image / professional photo likely found on many websites.
-
-Answer ONLY with a valid JSON object (no markdown):
+Ответь ТОЛЬКО в формате JSON:
 {
-  "isOriginal": true | false,
-  "confidence": "high" | "medium" | "low",
-  "reason": "brief explanation in Russian (max 15 words)"
-}
-
-Rules:
-- isOriginal = true: looks like a personal snapshot, amateur photo, unique perspective, local/regional scene with no famous landmarks recognizable as stock
-- isOriginal = false: looks like a stock photo (perfect lighting, watermark style, very professional composition of a famous landmark), meme, screenshot, or obvious internet image
-- confidence: how confident you are
-- reason: short explanation in Russian`;
+  "isOriginal": true,
+  "confidence": "high",
+  "reason": "краткое объяснение на русском (до 15 слов)"
+}`;
 
     const payload = {
       contents: [
@@ -289,31 +284,22 @@ Rules:
       generationConfig: { temperature: 0.1 },
     };
 
-    // Retry up to 2 times on 429 rate limit
-    let lastErr;
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    const modelsToTry = ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite'];
+    for (const model of modelsToTry) {
       try {
-        const response = await axios.post(url, payload, { timeout: 40000 });
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const response = await axios.post(url, payload, { timeout: 25000 });
         const raw = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-        // Strip markdown fences if present
         const clean = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
         const result = JSON.parse(clean);
-        console.log(`[AI] Vision check attempt ${attempt} success:`, result);
+        console.log(`[AI] Vision check (${model}) success for ${path.basename(absoluteImagePath)}:`, result);
         return {
-          isOriginal: result.isOriginal ?? null,
-          confidence: result.confidence || 'low',
+          isOriginal: typeof result.isOriginal === 'boolean' ? result.isOriginal : false,
+          confidence: result.confidence || 'medium',
           reason: result.reason || 'Анализ завершён',
         };
       } catch (err) {
-        lastErr = err;
-        const status = err.response?.status;
-        const body = JSON.stringify(err.response?.data || err.message);
-        console.error(`[AI] Vision check attempt ${attempt} failed (HTTP ${status}):`, body);
-        if (status === 429 && attempt < 3) {
-          await new Promise(r => setTimeout(r, attempt * 3000)); // 3s, 6s
-          continue;
-        }
-        break;
+        console.error(`[AI] Vision check model ${model} failed (${err.response?.status || err.message})`);
       }
     }
     return { isOriginal: null, confidence: 'low', reason: 'Не удалось проверить' };
@@ -322,3 +308,4 @@ Rules:
     return { isOriginal: null, confidence: 'low', reason: 'Не удалось проверить' };
   }
 };
+

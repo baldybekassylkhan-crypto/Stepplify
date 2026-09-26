@@ -14,6 +14,44 @@ const formatViews = (views) => {
   return String(views);
 };
 
+// In-memory set to prevent multiple concurrent checks on the same article
+const activeImageChecks = new Set();
+export const triggerImageCheck = (articleId, imagePaths) => {
+  if (!imagePaths || !imagePaths.length) return;
+  if (activeImageChecks.has(articleId)) return;
+
+  activeImageChecks.add(articleId);
+  setImmediate(async () => {
+    try {
+      const isRailwayData = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('/data/');
+      const uploadsBase = isRailwayData
+        ? '/data/uploads'
+        : path.join(path.dirname(new URL(import.meta.url).pathname), '../../uploads');
+
+      const results = await Promise.all(
+        imagePaths.map(async (urlPath) => {
+          const filename = path.basename(urlPath);
+          const absPath = path.join(uploadsBase, filename);
+          if (!fs.existsSync(absPath)) {
+            return { url: urlPath, isOriginal: null, confidence: 'low', reason: 'Файл не найден' };
+          }
+          const check = await checkImageOriginality(absPath);
+          return { url: urlPath, ...check };
+        })
+      );
+      await prisma.article.update({
+        where: { id: articleId },
+        data: { imageOriginality: JSON.stringify(results) },
+      });
+      console.log(`[AI] Image originality check finished for article #${articleId}:`, results.map(r => `${r.url} -> isOriginal=${r.isOriginal}`));
+    } catch (e) {
+      console.error('[AI] Background check failed for article #' + articleId, e.message);
+    } finally {
+      activeImageChecks.delete(articleId);
+    }
+  });
+};
+
 // 1. CreateArticle
 export const createArticle = async (req, res) => {
   try {
@@ -80,36 +118,8 @@ export const createArticle = async (req, res) => {
     });
 
     // ── Background: start image originality check BEFORE sending response ──
-    // Fire-and-forget: doesn't await so publish response is instant.
     if (imagePaths.length > 0) {
-      const isRailwayData = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('/data/');
-      const uploadsBase = isRailwayData
-        ? '/data/uploads'
-        : path.join(path.dirname(new URL(import.meta.url).pathname), '../../uploads');
-
-      const articleId = newArticle.id;
-      setImmediate(async () => {
-        try {
-          const results = await Promise.all(
-            imagePaths.map(async (urlPath) => {
-              const filename = path.basename(urlPath);
-              const absPath = path.join(uploadsBase, filename);
-              if (!fs.existsSync(absPath)) {
-                return { url: urlPath, isOriginal: null, confidence: 'low', reason: 'Файл не найден' };
-              }
-              const check = await checkImageOriginality(absPath);
-              return { url: urlPath, ...check };
-            })
-          );
-          await prisma.article.update({
-            where: { id: articleId },
-            data: { imageOriginality: JSON.stringify(results) },
-          });
-          console.log(`[AI] Image originality check done for article #${articleId}:`, results.map(r => `${r.url}→${r.isOriginal}`));
-        } catch (e) {
-          console.error('[AI] Background image check failed:', e.message);
-        }
-      });
+      triggerImageCheck(newArticle.id, imagePaths);
     }
 
     return res.status(201).json({
@@ -350,6 +360,19 @@ export const getArticleById = async (req, res) => {
       ? !!(await prisma.favorite.findUnique({ where: { userId_articleId: { userId, articleId } } }))
       : false;
 
+    const imagesList = JSON.parse(article.images || '[]');
+    let origList = [];
+    try {
+      origList = JSON.parse(article.imageOriginality || '[]');
+    } catch (e) {
+      origList = [];
+    }
+
+    // Auto-trigger background check if there are images and either no results or any pending/failed (isOriginal === null)
+    if (imagesList.length > 0 && (!origList.length || origList.some(o => o.isOriginal === null))) {
+      triggerImageCheck(article.id, imagesList);
+    }
+
     return res.json({
       id: article.id,
       title: article.title,
@@ -359,8 +382,8 @@ export const getArticleById = async (req, res) => {
       authorId: article.authorId,
       meta: article.author ? `${article.author.school} · ${article.author.grade}` : 'Студент',
       region: article.region || (article.author ? article.author.region : null),
-      images: JSON.parse(article.images || '[]'),
-      imageOriginality: JSON.parse(article.imageOriginality || '[]'),
+      images: imagesList,
+      imageOriginality: origList,
       locationName: article.locationName,
       geoLat: article.geoLat,
       geoLng: article.geoLng,
@@ -448,7 +471,9 @@ export const updateArticle = async (req, res) => {
     // article's existing gallery as-is.
     let imagesData = {};
     if (req.files && req.files.length > 0) {
-      imagesData = { images: JSON.stringify(req.files.map((file) => `/uploads/${file.filename}`)) };
+      const newImages = req.files.map((file) => `/uploads/${file.filename}`);
+      imagesData = { images: JSON.stringify(newImages), imageOriginality: '[]' };
+      triggerImageCheck(articleId, newImages);
     }
 
     const updated = await prisma.article.update({

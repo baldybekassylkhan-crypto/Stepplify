@@ -4568,6 +4568,14 @@ body.map-page {
   color: rgba(148, 163, 184, 0.8);
   border: 1px solid rgba(148, 163, 184, 0.2);
 }
+@keyframes icon-spin-cw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.img-originality-pending .spin-icon {
+  animation: icon-spin-cw 1.8s linear infinite;
+  display: inline-block;
+}
 
 .article-reader-title {
   font-size: 1.5rem;

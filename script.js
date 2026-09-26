@@ -1605,18 +1605,18 @@ document.addEventListener('DOMContentLoaded', () => {
           const info = originality.find(o => o.url === src) || originality[i] || null;
           let badge = '';
           if (info && info.isOriginal === true) {
-            badge = `<div class="img-originality-badge img-originality-original">
+            badge = `<div class="img-originality-badge img-originality-original" data-img-src="${src}">
               <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm3.28 5.78-3.75 3.75a.75.75 0 0 1-1.06 0l-1.75-1.75a.75.75 0 1 1 1.06-1.06l1.22 1.22 3.22-3.22a.75.75 0 1 1 1.06 1.06z"/></svg>
               Оригинальное фото
             </div>`;
           } else if (info && info.isOriginal === false) {
-            badge = `<div class="img-originality-badge img-originality-notoriginal" title="${info.reason || ''}">
+            badge = `<div class="img-originality-badge img-originality-notoriginal" data-img-src="${src}" title="${escapeHtml(info.reason || '')}">
               <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM7.25 4.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5zm.75 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>
-              Возможно не оригинальное
+              Не оригинальное фото
             </div>`;
           } else {
-            badge = `<div class="img-originality-badge img-originality-pending">
-              <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 3.5a.75.75 0 0 1 .75.75v3.5l2 1.15a.75.75 0 1 1-.75 1.3L7.5 9.5a.75.75 0 0 1-.75-.75V5.25A.75.75 0 0 1 8 4.5z"/></svg>
+            badge = `<div class="img-originality-badge img-originality-pending" data-img-src="${src}">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" class="spin-icon"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 3.5a.75.75 0 0 1 .75.75v3.5l2 1.15a.75.75 0 1 1-.75 1.3L7.5 9.5a.75.75 0 0 1-.75-.75V5.25A.75.75 0 0 1 8 4.5z"/></svg>
               Проверяется...
             </div>`;
           }
@@ -1856,6 +1856,53 @@ document.addEventListener('DOMContentLoaded', () => {
       wireOwnerActions(id, data);
       wireVerificationAction(id);
       recordArticleView(data);
+
+      // Auto-poll to update originality badges live if any are pending
+      if (Array.isArray(data.images) && data.images.length > 0) {
+        const hasPending = !data.imageOriginality ||
+          data.imageOriginality.length < data.images.length ||
+          data.imageOriginality.some(o => o.isOriginal === null);
+        if (hasPending) {
+          let pollAttempts = 0;
+          const pollTimer = setInterval(async () => {
+            pollAttempts++;
+            if (pollAttempts > 10 || !articleOverlay.classList.contains('open')) {
+              clearInterval(pollTimer);
+              return;
+            }
+            try {
+              const pollRes = await fetch(`${API_URL}/articles/${id}`);
+              if (pollRes.ok) {
+                const refreshed = await pollRes.json();
+                const orig = Array.isArray(refreshed.imageOriginality) ? refreshed.imageOriginality : [];
+                refreshed.images.forEach((src, idx) => {
+                  const info = orig.find(o => o.url === src) || orig[idx];
+                  if (info && typeof info.isOriginal === 'boolean') {
+                    const badgeEl = articleReader.querySelector(`[data-img-src="${src}"]`);
+                    if (badgeEl && badgeEl.classList.contains('img-originality-pending')) {
+                      badgeEl.className = `img-originality-badge ${info.isOriginal ? 'img-originality-original' : 'img-originality-notoriginal'}`;
+                      badgeEl.innerHTML = info.isOriginal
+                        ? `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm3.28 5.78-3.75 3.75a.75.75 0 0 1-1.06 0l-1.75-1.75a.75.75 0 1 1 1.06-1.06l1.22 1.22 3.22-3.22a.75.75 0 1 1 1.06 1.06z"/></svg> Оригинальное фото`
+                        : `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM7.25 4.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5zm.75 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg> Не оригинальное фото`;
+                      if (!info.isOriginal && info.reason) {
+                        badgeEl.title = info.reason;
+                      }
+                    }
+                  }
+                });
+                const allDone = refreshed.images.length > 0 &&
+                  orig.length >= refreshed.images.length &&
+                  orig.every(o => typeof o.isOriginal === 'boolean');
+                if (allDone) {
+                  clearInterval(pollTimer);
+                }
+              }
+            } catch (err) {
+              console.warn('[AI] Poll image status error:', err);
+            }
+          }, 2500);
+        }
+      }
 
       if (highlightType && highlightId) {
         setTimeout(() => {
