@@ -79,6 +79,39 @@ export const createArticle = async (req, res) => {
       },
     });
 
+    // ── Background: start image originality check BEFORE sending response ──
+    // Fire-and-forget: doesn't await so publish response is instant.
+    if (imagePaths.length > 0) {
+      const isRailwayData = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('/data/');
+      const uploadsBase = isRailwayData
+        ? '/data/uploads'
+        : path.join(path.dirname(new URL(import.meta.url).pathname), '../../uploads');
+
+      const articleId = newArticle.id;
+      setImmediate(async () => {
+        try {
+          const results = await Promise.all(
+            imagePaths.map(async (urlPath) => {
+              const filename = path.basename(urlPath);
+              const absPath = path.join(uploadsBase, filename);
+              if (!fs.existsSync(absPath)) {
+                return { url: urlPath, isOriginal: null, confidence: 'low', reason: 'Файл не найден' };
+              }
+              const check = await checkImageOriginality(absPath);
+              return { url: urlPath, ...check };
+            })
+          );
+          await prisma.article.update({
+            where: { id: articleId },
+            data: { imageOriginality: JSON.stringify(results) },
+          });
+          console.log(`[AI] Image originality check done for article #${articleId}:`, results.map(r => `${r.url}→${r.isOriginal}`));
+        } catch (e) {
+          console.error('[AI] Background image check failed:', e.message);
+        }
+      });
+    }
+
     return res.status(201).json({
       message: 'Статья успешно создана! Вам начислено +100 баллов.',
       article: {
@@ -89,34 +122,6 @@ export const createArticle = async (req, res) => {
         viewsFormatted: '0',
       },
     });
-
-    // ── Background: check each image for originality (non-blocking) ──────────
-    // Runs AFTER the response is sent so publish is never slowed down.
-    if (imagePaths.length > 0) {
-      const isRailwayData = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('/data/');
-      const uploadsBase = isRailwayData ? '/data/uploads' : path.join(path.dirname(new URL(import.meta.url).pathname), '../../uploads');
-
-      (async () => {
-        try {
-          const results = await Promise.all(
-            imagePaths.map(async (urlPath) => {
-              const filename = path.basename(urlPath);
-              const absPath = path.join(uploadsBase, filename);
-              if (!fs.existsSync(absPath)) return { url: urlPath, isOriginal: null, confidence: 'low', reason: 'Файл не найден' };
-              const check = await checkImageOriginality(absPath);
-              return { url: urlPath, ...check };
-            })
-          );
-          await prisma.article.update({
-            where: { id: newArticle.id },
-            data: { imageOriginality: JSON.stringify(results) },
-          });
-          console.log(`Image originality check done for article #${newArticle.id}`);
-        } catch (e) {
-          console.error('Background image check failed:', e.message);
-        }
-      })();
-    }
   } catch (error) {
     console.error('Error in CreateArticle:', error);
     return res.status(500).json({ error: 'Ошибка при создании статьи.' });

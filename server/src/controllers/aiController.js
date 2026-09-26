@@ -258,7 +258,9 @@ export const checkImageOriginality = async (absoluteImagePath) => {
       : ext === 'gif' ? 'image/gif'
       : 'image/jpeg';
 
-    const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    // Force a vision-capable model — the text model (gemini-3.5-flash-lite)
+    // does NOT support image inputs. gemini-1.5-flash always supports vision.
+    const model = 'gemini-1.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const prompt = `Analyse this image and determine if it looks like an ORIGINAL personal photograph taken by an amateur (student, hiker, tourist) OR a stock photo / well-known internet image / professional photo likely found on many websites.
