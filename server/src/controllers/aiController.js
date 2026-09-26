@@ -258,9 +258,8 @@ export const checkImageOriginality = async (absoluteImagePath) => {
       : ext === 'gif' ? 'image/gif'
       : 'image/jpeg';
 
-    // Use a vision-capable model explicitly — gemini-3.1-flash-lite-image
-    // supports image inputs and is available on this API key.
-    const model = 'gemini-3.1-flash-lite-image';
+    // gemini-2.5-flash: vision-capable, higher rate limits than lite-image models
+    const model = 'gemini-2.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const prompt = `Analyse this image and determine if it looks like an ORIGINAL personal photograph taken by an amateur (student, hiker, tourist) OR a stock photo / well-known internet image / professional photo likely found on many websites.
@@ -278,7 +277,7 @@ Rules:
 - confidence: how confident you are
 - reason: short explanation in Russian`;
 
-    const response = await axios.post(url, {
+    const payload = {
       contents: [
         {
           parts: [
@@ -287,18 +286,39 @@ Rules:
           ],
         },
       ],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0.1 },
-    }, { timeout: 30000 });
-
-    const raw = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    const result = JSON.parse(raw);
-    return {
-      isOriginal: result.isOriginal ?? null,
-      confidence: result.confidence || 'low',
-      reason: result.reason || 'Анализ завершён',
+      generationConfig: { temperature: 0.1 },
     };
+
+    // Retry up to 2 times on 429 rate limit
+    let lastErr;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await axios.post(url, payload, { timeout: 40000 });
+        const raw = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        // Strip markdown fences if present
+        const clean = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+        const result = JSON.parse(clean);
+        console.log(`[AI] Vision check attempt ${attempt} success:`, result);
+        return {
+          isOriginal: result.isOriginal ?? null,
+          confidence: result.confidence || 'low',
+          reason: result.reason || 'Анализ завершён',
+        };
+      } catch (err) {
+        lastErr = err;
+        const status = err.response?.status;
+        const body = JSON.stringify(err.response?.data || err.message);
+        console.error(`[AI] Vision check attempt ${attempt} failed (HTTP ${status}):`, body);
+        if (status === 429 && attempt < 3) {
+          await new Promise(r => setTimeout(r, attempt * 3000)); // 3s, 6s
+          continue;
+        }
+        break;
+      }
+    }
+    return { isOriginal: null, confidence: 'low', reason: 'Не удалось проверить' };
   } catch (err) {
-    console.error('checkImageOriginality error:', err.message);
+    console.error('checkImageOriginality outer error:', err.message);
     return { isOriginal: null, confidence: 'low', reason: 'Не удалось проверить' };
   }
 };
