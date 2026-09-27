@@ -14,19 +14,70 @@ if (!fs.existsSync(podcastsDir)) {
   fs.mkdirSync(podcastsDir, { recursive: true });
 }
 
-// Split article text into sentences and phrases suitable for TTS (< 180 chars)
-function splitTextForTts(text, maxLen = 180) {
-  // Clean text from HTML, markdown links, symbols
-  const clean = text
+// Clean and prepare text for pleasant natural narration
+function cleanTextForSpeech(text) {
+  return text
     .replace(/<[^>]*>/g, ' ')
     .replace(/https?:\/\/\S+/g, ' ')
-    .replace(/[#*`_~]/g, '')
+    .replace(/[*#`_~]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+}
 
-  const sentences = clean.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [clean];
+// ElevenLabs TTS generator
+async function generateElevenLabsAudio(text, apiKey, voiceId = 'pNInz6obpgDQGcFmaJgB') {
+  const maxLen = 4500;
   const chunks = [];
+  if (text.length <= maxLen) {
+    chunks.push(text);
+  } else {
+    const sentences = text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [text];
+    let curr = '';
+    for (const s of sentences) {
+      if ((curr + ' ' + s).trim().length <= maxLen) {
+        curr = (curr ? curr + ' ' : '') + s.trim();
+      } else {
+        if (curr) chunks.push(curr);
+        curr = s.trim();
+      }
+    }
+    if (curr) chunks.push(curr);
+  }
 
+  const buffers = [];
+  for (const chunk of chunks) {
+    const response = await axios.post(
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      {
+        text: chunk,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: {
+          stability: 0.55,
+          similarity_boost: 0.78,
+          style: 0.15,
+          use_speaker_boost: true,
+        },
+      },
+      {
+        headers: {
+          'xi-api-key': apiKey,
+          'Content-Type': 'application/json',
+          'Accept': 'audio/mpeg',
+        },
+        responseType: 'arraybuffer',
+        timeout: 35000,
+      }
+    );
+    buffers.push(Buffer.from(response.data));
+  }
+
+  return Buffer.concat(buffers);
+}
+
+// Fallback Google TTS
+function splitTextForGoogleTts(text, maxLen = 180) {
+  const sentences = text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [text];
+  const chunks = [];
   for (let s of sentences) {
     s = s.trim();
     if (!s) continue;
@@ -49,17 +100,28 @@ function splitTextForTts(text, maxLen = 180) {
   return chunks;
 }
 
-async function fetchChunkAudio(text) {
+async function fetchGoogleTtsChunk(text) {
   const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=ru&client=tw-ob`;
   const res = await axios.get(url, {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
     responseType: 'arraybuffer',
-    timeout: 12000,
+    timeout: 10000,
   });
   return Buffer.from(res.data);
 }
 
-// In-progress generation promises to avoid duplicate simultaneous TTS builds
+async function generateGoogleTtsAudio(text) {
+  const chunks = splitTextForGoogleTts(text);
+  const buffers = [];
+  const batchSize = 3;
+  for (let i = 0; i < chunks.length; i += batchSize) {
+    const slice = chunks.slice(i, i + batchSize);
+    const batchResults = await Promise.all(slice.map((chunk) => fetchGoogleTtsChunk(chunk)));
+    buffers.push(...batchResults);
+  }
+  return Buffer.concat(buffers);
+}
+
 const activeGenerations = new Map();
 
 export const getArticlePodcastAudio = async (req, res) => {
@@ -92,7 +154,7 @@ export const getArticlePodcastAudio = async (req, res) => {
       }
     }
 
-    // Check if generation is already in progress for this article
+    // Wait if generation is already in progress
     if (activeGenerations.has(articleId)) {
       await activeGenerations.get(articleId);
       if (fs.existsSync(filePath)) {
@@ -102,25 +164,38 @@ export const getArticlePodcastAudio = async (req, res) => {
       }
     }
 
-    // Prepare speech text
     const authorName = article.author?.fullName ? `Автор: ${article.author.fullName}. ` : '';
-    const fullSpeechText = `${article.title}. ${authorName}${article.content}`;
-    const chunks = splitTextForTts(fullSpeechText);
+    const cleanContent = cleanTextForSpeech(article.content);
+    const fullSpeechText = `${article.title}. ${authorName}${cleanContent}`;
 
-    if (!chunks.length) {
+    if (!fullSpeechText.trim()) {
       return res.status(400).json({ error: 'Нет текста для озвучивания' });
     }
 
-    // Start generation with promise locking
+    const elevenKey = process.env.ELEVENLABS_API_KEY;
+    const elevenVoiceId = process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgDQGcFmaJgB';
+
     const genPromise = (async () => {
-      const buffers = [];
-      const batchSize = 3;
-      for (let i = 0; i < chunks.length; i += batchSize) {
-        const slice = chunks.slice(i, i + batchSize);
-        const batchResults = await Promise.all(slice.map((chunk) => fetchChunkAudio(chunk)));
-        buffers.push(...batchResults);
+      let finalMp3 = null;
+
+      // 1. Try ElevenLabs first with studio-quality pleasant voice
+      if (elevenKey) {
+        try {
+          console.log(`[Podcast] Generating audio via ElevenLabs (voice: ${elevenVoiceId}) for article #${articleId}...`);
+          finalMp3 = await generateElevenLabsAudio(fullSpeechText, elevenKey, elevenVoiceId);
+          console.log(`[Podcast] ElevenLabs audio generated successfully (${finalMp3.length} bytes)`);
+        } catch (elevenErr) {
+          const errMsg = elevenErr.response?.data ? Buffer.from(elevenErr.response.data).toString('utf8') : elevenErr.message;
+          console.warn('[Podcast] ElevenLabs error, falling back to backup TTS:', errMsg);
+        }
       }
-      const finalMp3 = Buffer.concat(buffers);
+
+      // 2. Fallback to Google TTS if ElevenLabs is unavailable or failed
+      if (!finalMp3) {
+        console.log(`[Podcast] Generating audio via Google TTS for article #${articleId}...`);
+        finalMp3 = await generateGoogleTtsAudio(fullSpeechText);
+      }
+
       fs.writeFileSync(filePath, finalMp3);
       return filePath;
     })();
