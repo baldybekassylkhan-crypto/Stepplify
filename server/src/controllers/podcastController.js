@@ -15,13 +15,13 @@ if (!fs.existsSync(podcastsDir)) {
 }
 
 export const PRESET_VOICES = {
-  alex: { id: 'TUQNWEvVPBLzMBSVDPUA', name: 'Alex Bell', desc: 'Глубокий дикторский голос' },
+  adam: { id: 'pNInz6obpgDQGcFmaJgB', name: 'Адам (Adam)', desc: 'Классический глубокий мужской голос' },
 };
 
 export const getPresetVoices = (req, res) => {
   return res.json({
     success: true,
-    default: 'alex',
+    default: 'adam',
     voices: PRESET_VOICES,
   });
 };
@@ -37,7 +37,7 @@ function cleanTextForSpeech(text) {
 }
 
 // ElevenLabs TTS generator
-async function generateElevenLabsAudio(text, apiKey, voiceId = 'TUQNWEvVPBLzMBSVDPUA') {
+async function generateElevenLabsAudio(text, apiKey, voiceId = 'pNInz6obpgDQGcFmaJgB') {
   const maxLen = 4500;
   const chunks = [];
   if (text.length <= maxLen) {
@@ -150,6 +150,37 @@ async function generateGoogleTtsAudio(text) {
   return Buffer.concat(buffers);
 }
 
+// Deep natural male voice generator (Russian Dmitry / Kazakh Daulet)
+async function generateEdgeTtsAudio(text) {
+  const { MsEdgeTTS, OUTPUT_FORMAT } = await import('msedge-tts');
+  const tts = new MsEdgeTTS();
+  const isKazakh = /[әіңғүұқөһӘІҢҒҮҰҚӨҺ]/.test(text);
+  const voice = isKazakh ? 'kk-KZ-DauletNeural' : 'ru-RU-DmitryNeural';
+  await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+
+  return new Promise((resolve, reject) => {
+    try {
+      const { audioStream } = tts.toStream(text);
+      const chunks = [];
+      const timer = setTimeout(() => {
+        reject(new Error('Edge TTS timeout'));
+      }, 35000);
+
+      audioStream.on('data', (c) => chunks.push(c));
+      audioStream.on('end', () => {
+        clearTimeout(timer);
+        resolve(Buffer.concat(chunks));
+      });
+      audioStream.on('error', (err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
 const activeGenerations = new Map();
 
 export const getArticlePodcastAudio = async (req, res) => {
@@ -171,7 +202,7 @@ export const getArticlePodcastAudio = async (req, res) => {
 
     // Determine voice choice
     const requestedVoice = (req.query.voice || '').toLowerCase();
-    const voiceKey = PRESET_VOICES[requestedVoice] ? requestedVoice : 'alex';
+    const voiceKey = PRESET_VOICES[requestedVoice] ? requestedVoice : 'adam';
     const voiceInfo = PRESET_VOICES[voiceKey];
     const elevenVoiceId = voiceInfo.id;
 
@@ -212,7 +243,7 @@ export const getArticlePodcastAudio = async (req, res) => {
     const genPromise = (async () => {
       let finalMp3 = null;
 
-      // 1. Try ElevenLabs first with the chosen pleasant voice
+      // 1. Try ElevenLabs first with Adam
       if (elevenKey) {
         try {
           console.log(`[Podcast] Generating audio via ElevenLabs (${voiceInfo.name}, id: ${elevenVoiceId}) for article #${articleId}...`);
@@ -220,11 +251,22 @@ export const getArticlePodcastAudio = async (req, res) => {
           console.log(`[Podcast] ElevenLabs audio generated successfully (${finalMp3.length} bytes)`);
         } catch (elevenErr) {
           const errMsg = elevenErr.response?.data ? Buffer.from(elevenErr.response.data).toString('utf8') : elevenErr.message;
-          console.warn('[Podcast] ElevenLabs error, falling back to backup TTS:', errMsg);
+          console.warn('[Podcast] ElevenLabs unavailable/exhausted, switching to deep male Neural voice:', errMsg);
         }
       }
 
-      // 2. Fallback to Google TTS if ElevenLabs fails
+      // 2. High-quality deep male neural voice fallback (Dmitry / Daulet)
+      if (!finalMp3) {
+        try {
+          console.log(`[Podcast] Generating deep male audio via Neural Voice for article #${articleId}...`);
+          finalMp3 = await generateEdgeTtsAudio(fullSpeechText);
+          console.log(`[Podcast] Neural male audio generated successfully (${finalMp3.length} bytes)`);
+        } catch (edgeErr) {
+          console.warn('[Podcast] Neural Male TTS error, falling back to Google TTS:', edgeErr.message);
+        }
+      }
+
+      // 3. Fallback to Google TTS only as absolute last resort
       if (!finalMp3) {
         console.log(`[Podcast] Generating audio via Google TTS for article #${articleId}...`);
         finalMp3 = await generateGoogleTtsAudio(fullSpeechText);
