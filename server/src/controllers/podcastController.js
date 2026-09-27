@@ -14,6 +14,21 @@ if (!fs.existsSync(podcastsDir)) {
   fs.mkdirSync(podcastsDir, { recursive: true });
 }
 
+export const PRESET_VOICES = {
+  george: { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'Джордж', desc: 'Теплый рассказчик' },
+  brian: { id: 'nPczCjzI2devNBz1zQrb', name: 'Брайан', desc: 'Спокойный диктор' },
+  antoni: { id: 'ErXwobaYiN019PkySvjV', name: 'Антони', desc: 'Мягкий молодой' },
+  lily: { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Лили', desc: 'Бархатный женский' },
+};
+
+export const getPresetVoices = (req, res) => {
+  return res.json({
+    success: true,
+    default: 'george',
+    voices: PRESET_VOICES,
+  });
+};
+
 // Clean and prepare text for pleasant natural narration
 function cleanTextForSpeech(text) {
   return text
@@ -25,7 +40,7 @@ function cleanTextForSpeech(text) {
 }
 
 // ElevenLabs TTS generator
-async function generateElevenLabsAudio(text, apiKey, voiceId = 'pNInz6obpgDQGcFmaJgB') {
+async function generateElevenLabsAudio(text, apiKey, voiceId = 'JBFqnCBsd6RMkjVDRZzb') {
   const maxLen = 4500;
   const chunks = [];
   if (text.length <= maxLen) {
@@ -52,9 +67,9 @@ async function generateElevenLabsAudio(text, apiKey, voiceId = 'pNInz6obpgDQGcFm
         text: chunk,
         model_id: 'eleven_multilingual_v2',
         voice_settings: {
-          stability: 0.55,
-          similarity_boost: 0.78,
-          style: 0.15,
+          stability: 0.65,
+          similarity_boost: 0.85,
+          style: 0.1,
           use_speaker_boost: true,
         },
       },
@@ -65,7 +80,7 @@ async function generateElevenLabsAudio(text, apiKey, voiceId = 'pNInz6obpgDQGcFm
           'Accept': 'audio/mpeg',
         },
         responseType: 'arraybuffer',
-        timeout: 35000,
+        timeout: 40000,
       }
     );
     buffers.push(Buffer.from(response.data));
@@ -141,7 +156,14 @@ export const getArticlePodcastAudio = async (req, res) => {
       return res.status(404).json({ error: 'Публикация не найдена' });
     }
 
-    const filePath = path.join(podcastsDir, `article_${article.id}.mp3`);
+    // Determine voice choice
+    const requestedVoice = (req.query.voice || '').toLowerCase();
+    const voiceKey = PRESET_VOICES[requestedVoice] ? requestedVoice : 'george';
+    const voiceInfo = PRESET_VOICES[voiceKey];
+    const elevenVoiceId = voiceInfo.id;
+
+    const filePath = path.join(podcastsDir, `article_${article.id}_${voiceKey}.mp3`);
+    const lockKey = `${articleId}_${voiceKey}`;
 
     // Check if audio file already exists and is fresh
     if (fs.existsSync(filePath)) {
@@ -154,9 +176,9 @@ export const getArticlePodcastAudio = async (req, res) => {
       }
     }
 
-    // Wait if generation is already in progress
-    if (activeGenerations.has(articleId)) {
-      await activeGenerations.get(articleId);
+    // Wait if generation is already in progress for this article & voice
+    if (activeGenerations.has(lockKey)) {
+      await activeGenerations.get(lockKey);
       if (fs.existsSync(filePath)) {
         res.setHeader('Content-Type', 'audio/mpeg');
         res.setHeader('Accept-Ranges', 'bytes');
@@ -173,15 +195,14 @@ export const getArticlePodcastAudio = async (req, res) => {
     }
 
     const elevenKey = process.env.ELEVENLABS_API_KEY;
-    const elevenVoiceId = process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgDQGcFmaJgB';
 
     const genPromise = (async () => {
       let finalMp3 = null;
 
-      // 1. Try ElevenLabs first with studio-quality pleasant voice
+      // 1. Try ElevenLabs first with the chosen pleasant voice
       if (elevenKey) {
         try {
-          console.log(`[Podcast] Generating audio via ElevenLabs (voice: ${elevenVoiceId}) for article #${articleId}...`);
+          console.log(`[Podcast] Generating audio via ElevenLabs (${voiceInfo.name}, id: ${elevenVoiceId}) for article #${articleId}...`);
           finalMp3 = await generateElevenLabsAudio(fullSpeechText, elevenKey, elevenVoiceId);
           console.log(`[Podcast] ElevenLabs audio generated successfully (${finalMp3.length} bytes)`);
         } catch (elevenErr) {
@@ -190,7 +211,7 @@ export const getArticlePodcastAudio = async (req, res) => {
         }
       }
 
-      // 2. Fallback to Google TTS if ElevenLabs is unavailable or failed
+      // 2. Fallback to Google TTS if ElevenLabs fails
       if (!finalMp3) {
         console.log(`[Podcast] Generating audio via Google TTS for article #${articleId}...`);
         finalMp3 = await generateGoogleTtsAudio(fullSpeechText);
@@ -200,12 +221,12 @@ export const getArticlePodcastAudio = async (req, res) => {
       return filePath;
     })();
 
-    activeGenerations.set(articleId, genPromise);
+    activeGenerations.set(lockKey, genPromise);
 
     try {
       await genPromise;
     } finally {
-      activeGenerations.delete(articleId);
+      activeGenerations.delete(lockKey);
     }
 
     res.setHeader('Content-Type', 'audio/mpeg');

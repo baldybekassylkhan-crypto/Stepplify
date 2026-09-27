@@ -10,7 +10,7 @@ import { toggleFavorite, getUserFavorites } from '../controllers/favoriteControl
 import { addPoints, getMonthlyTop, getSchoolLeaderboard, getWinnersList } from '../controllers/gamificationController.js';
 import { searchUsers, sendFriendRequest, respondToFriendRequest, removeFriendship, listFriends, getPublicUserProfile } from '../controllers/friendController.js';
 import { aiEditDraft, summarizeArticle } from '../controllers/aiController.js';
-import { getArticlePodcastAudio } from '../controllers/podcastController.js';
+import { getArticlePodcastAudio, getPresetVoices } from '../controllers/podcastController.js';
 import { generateTravelRoute, calculateTripCost } from '../controllers/travelController.js';
 import { sendSupportMessage } from '../controllers/supportController.js';
 import { createReport, getReports, updateReportStatus, getPendingReportsCount } from '../controllers/reportController.js';
@@ -79,6 +79,7 @@ router.post('/articles/:id/summary', optionalAuth, summarizeArticle);
 router.get('/articles/:id/summary', optionalAuth, summarizeArticle);
 router.get('/articles/:id/podcast', optionalAuth, getArticlePodcastAudio);
 router.get('/articles/:id/audio', optionalAuth, getArticlePodcastAudio);
+router.get('/podcast/voices', getPresetVoices);
 
 router.post('/users/:userId/points', addPoints);
 router.get('/leaderboard/monthly', getMonthlyTop);

@@ -1812,6 +1812,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button type="button" class="podcast-speed-btn" id="podcastSpeedBtn" title="Скорость воспроизведения">
                   1x
                 </button>
+
+                <button type="button" class="podcast-voice-btn" id="podcastVoiceBtn" title="Сменить голос (Джордж, Брайан, Антони, Лили)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                  <span id="podcastVoiceCurrentName">Джордж</span>
+                </button>
               </div>
             </div>
           </div>
@@ -2113,11 +2118,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressFill = document.getElementById('podcastProgressFill');
     const currentTimeEl = document.getElementById('podcastCurrentTime');
     const durationEl = document.getElementById('podcastDuration');
+    const voiceBtn = document.getElementById('podcastVoiceBtn');
+    const voiceNameEl = document.getElementById('podcastVoiceCurrentName');
 
     if (!podcastBtn || !podcastCard) return;
 
+    const voiceList = [
+      { key: 'george', name: 'Джордж' },
+      { key: 'brian', name: 'Брайан' },
+      { key: 'antoni', name: 'Антони' },
+      { key: 'lily', name: 'Лили' },
+    ];
+
+    let currentVoiceKey = localStorage.getItem('stepplify_podcast_voice') || 'george';
+    const activeVoice = voiceList.find(v => v.key === currentVoiceKey) || voiceList[0];
+    if (voiceNameEl) voiceNameEl.textContent = activeVoice.name;
+
     const audio = window.__stepplifyPodcastAudio;
-    const podcastUrl = `${API_URL}/articles/${articleId}/podcast`;
+    const getPodcastUrl = (voice = currentVoiceKey) => `${API_URL}/articles/${articleId}/podcast?voice=${voice}`;
 
     const formatTime = (secs) => {
       if (isNaN(secs) || secs < 0) return '00:00';
@@ -2172,8 +2190,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
-    // If currently playing this specific article, restore UI state
-    const isCurrentPlaying = audio.dataset.currentArticleId === String(articleId);
+    // If currently playing this specific article and voice, restore UI state
+    const isCurrentPlaying = audio.dataset.currentArticleId === String(articleId) && (audio.dataset.currentVoice === currentVoiceKey);
     if (isCurrentPlaying) {
       podcastCard.style.display = 'block';
       podcastBtn.classList.add('is-open');
@@ -2194,17 +2212,33 @@ document.addEventListener('DOMContentLoaded', () => {
       podcastBtn.classList.remove('is-open');
     });
 
-    const startPlayback = () => {
+    const startPlayback = (voice = currentVoiceKey, autoplay = true) => {
       loadingEl.style.display = 'flex';
       playerUi.style.opacity = '0.5';
 
-      audio.src = podcastUrl;
+      audio.src = getPodcastUrl(voice);
       audio.dataset.currentArticleId = String(articleId);
-      audio.play().catch((err) => {
-        console.warn('[Podcast] Play error:', err);
-      });
+      audio.dataset.currentVoice = voice;
+      if (autoplay) {
+        audio.play().catch((err) => {
+          console.warn('[Podcast] Play error:', err);
+        });
+      }
       setupMediaSession();
     };
+
+    voiceBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const currentIdx = voiceList.findIndex(v => v.key === currentVoiceKey);
+      const nextIdx = (currentIdx + 1) % voiceList.length;
+      const nextVoice = voiceList[nextIdx];
+      currentVoiceKey = nextVoice.key;
+      localStorage.setItem('stepplify_podcast_voice', currentVoiceKey);
+      if (voiceNameEl) voiceNameEl.textContent = nextVoice.name;
+
+      const wasPlaying = !audio.paused;
+      startPlayback(currentVoiceKey, wasPlaying);
+    });
 
     podcastBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -2215,8 +2249,8 @@ document.addEventListener('DOMContentLoaded', () => {
         podcastBtn.classList.add('is-open');
       }
 
-      if (audio.dataset.currentArticleId !== String(articleId)) {
-        startPlayback();
+      if (audio.dataset.currentArticleId !== String(articleId) || audio.dataset.currentVoice !== currentVoiceKey) {
+        startPlayback(currentVoiceKey, true);
       } else {
         if (audio.paused) {
           audio.play().catch(() => {});
@@ -2228,8 +2262,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     playPauseBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (audio.dataset.currentArticleId !== String(articleId)) {
-        startPlayback();
+      if (audio.dataset.currentArticleId !== String(articleId) || audio.dataset.currentVoice !== currentVoiceKey) {
+        startPlayback(currentVoiceKey, true);
       } else {
         if (audio.paused) {
           audio.play().catch(() => {});
