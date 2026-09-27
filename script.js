@@ -1730,16 +1730,26 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="article-reader-stats">👁 <span id="articleViewsValue">${escapeHtml(String(a.viewsFormatted ?? a.views ?? 0))}</span></div>
       <div class="article-reader-body">${escapeHtml(a.content).replace(/\n/g, '<br>')}</div>
       <div class="article-summary-box" id="articleSummaryBox" data-article-id="${a.id}">
-        <button type="button" class="article-summary-btn" id="articleSummaryBtn" title="Краткий пересказ">
-          <svg class="summary-btn-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-            <path d="M5 3v4"/>
-            <path d="M19 17v4"/>
-            <path d="M3 5h4"/>
-            <path d="M17 19h4"/>
-          </svg>
-          <span class="summary-btn-text">Краткий пересказ</span>
-        </button>
+        <div class="article-tools-buttons-row">
+          <button type="button" class="article-summary-btn" id="articleSummaryBtn" title="Краткий пересказ">
+            <svg class="summary-btn-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+              <path d="M5 3v4"/>
+              <path d="M19 17v4"/>
+              <path d="M3 5h4"/>
+              <path d="M17 19h4"/>
+            </svg>
+            <span class="summary-btn-text">Краткий пересказ</span>
+          </button>
+
+          <button type="button" class="article-podcast-btn" id="articlePodcastBtn" title="Слушать как подкаст в наушниках (играет даже при выключенном экране)">
+            <svg class="podcast-btn-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+            </svg>
+            <span class="podcast-btn-text">Слушать подкаст</span>
+          </button>
+        </div>
 
         <div class="article-summary-result" id="articleSummaryResult" style="display: none;">
           <div class="summary-result-header">
@@ -1753,6 +1763,58 @@ document.addEventListener('DOMContentLoaded', () => {
             <button type="button" class="summary-close-btn" id="summaryCloseBtn" title="Скрыть">&times;</button>
           </div>
           <div class="summary-result-content" id="summaryResultContent"></div>
+        </div>
+
+        <div class="article-podcast-card" id="articlePodcastCard" style="display: none;">
+          <div class="podcast-card-header">
+            <div class="podcast-card-title">
+              <svg class="podcast-header-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+              </svg>
+              <span>Подкаст статьи</span>
+              <span class="podcast-badge-phone">🎧 играет в фоне и при выключенном экране</span>
+            </div>
+            <button type="button" class="podcast-close-btn" id="podcastCloseBtn" title="Скрыть плеер">&times;</button>
+          </div>
+
+          <div class="podcast-card-body">
+            <div class="podcast-loading" id="podcastLoading" style="display: none;">
+              <div class="podcast-loading-spinner"></div>
+              <span>Готовим аудиодорожку подкаста...</span>
+            </div>
+
+            <div class="podcast-player-ui" id="podcastPlayerUi">
+              <div class="podcast-timeline-row">
+                <span class="podcast-time" id="podcastCurrentTime">00:00</span>
+                <div class="podcast-progress-track" id="podcastProgressTrack">
+                  <div class="podcast-progress-fill" id="podcastProgressFill"></div>
+                </div>
+                <span class="podcast-time" id="podcastDuration">00:00</span>
+              </div>
+
+              <div class="podcast-controls-row">
+                <button type="button" class="podcast-ctrl-btn" id="podcastRewindBtn" title="Назад на 10 сек">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  <span class="podcast-ctrl-sub">10</span>
+                </button>
+
+                <button type="button" class="podcast-main-play-btn" id="podcastMainPlayBtn" title="Воспроизвести">
+                  <svg class="podcast-play-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                  <svg class="podcast-pause-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="display: none;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                </button>
+
+                <button type="button" class="podcast-ctrl-btn" id="podcastForwardBtn" title="Вперед на 10 сек">
+                  <span class="podcast-ctrl-sub">10</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                </button>
+
+                <button type="button" class="podcast-speed-btn" id="podcastSpeedBtn" title="Скорость воспроизведения">
+                  1x
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="article-reader-rating" id="articleReaderRating">${renderRatingBlock(a.rating)}</div>
@@ -2029,6 +2091,253 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  // Global persistent audio instance for uninterrupted background & lock-screen playback
+  if (!window.__stepplifyPodcastAudio) {
+    window.__stepplifyPodcastAudio = new Audio();
+    window.__stepplifyPodcastAudio.preload = 'metadata';
+  }
+
+  const wireArticlePodcast = (articleId, articleData) => {
+    const podcastBtn = document.getElementById('articlePodcastBtn');
+    const podcastCard = document.getElementById('articlePodcastCard');
+    const closeBtn = document.getElementById('podcastCloseBtn');
+    const loadingEl = document.getElementById('podcastLoading');
+    const playerUi = document.getElementById('podcastPlayerUi');
+    const playPauseBtn = document.getElementById('podcastMainPlayBtn');
+    const playIcon = playPauseBtn?.querySelector('.podcast-play-icon');
+    const pauseIcon = playPauseBtn?.querySelector('.podcast-pause-icon');
+    const rewindBtn = document.getElementById('podcastRewindBtn');
+    const forwardBtn = document.getElementById('podcastForwardBtn');
+    const speedBtn = document.getElementById('podcastSpeedBtn');
+    const progressTrack = document.getElementById('podcastProgressTrack');
+    const progressFill = document.getElementById('podcastProgressFill');
+    const currentTimeEl = document.getElementById('podcastCurrentTime');
+    const durationEl = document.getElementById('podcastDuration');
+
+    if (!podcastBtn || !podcastCard) return;
+
+    const audio = window.__stepplifyPodcastAudio;
+    const podcastUrl = `${API_URL}/articles/${articleId}/podcast`;
+
+    const formatTime = (secs) => {
+      if (isNaN(secs) || secs < 0) return '00:00';
+      const m = Math.floor(secs / 60);
+      const s = Math.floor(secs % 60);
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    };
+
+    const updatePlayStateUi = (isPlaying) => {
+      if (playIcon && pauseIcon) {
+        playIcon.style.display = isPlaying ? 'none' : 'block';
+        pauseIcon.style.display = isPlaying ? 'block' : 'none';
+      }
+      podcastBtn.classList.toggle('is-playing', isPlaying);
+    };
+
+    const setupMediaSession = () => {
+      if ('mediaSession' in navigator) {
+        let artworkUrl = '/assets/logo-icon.png';
+        if (Array.isArray(articleData?.images) && articleData.images.length > 0 && typeof articleData.images[0] === 'string') {
+          artworkUrl = articleData.images[0];
+        }
+        try {
+          artworkUrl = new URL(artworkUrl, window.location.href).href;
+        } catch {}
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: articleData?.title || 'Подкаст статьи',
+          artist: `${articleData?.author || 'Stepplify'} · Stepplify Подкаст`,
+          album: 'Stepplify Аудиогид',
+          artwork: [
+            { src: artworkUrl, sizes: '512x512', type: 'image/png' },
+            { src: artworkUrl, sizes: '256x256', type: 'image/png' }
+          ]
+        });
+
+        navigator.mediaSession.setActionHandler('play', () => {
+          audio.play().catch(() => {});
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          audio.pause();
+        });
+        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+          audio.currentTime = Math.max(audio.currentTime - (details.seekOffset || 10), 0);
+        });
+        navigator.mediaSession.setActionHandler('seekforward', (details) => {
+          audio.currentTime = Math.min(audio.currentTime + (details.seekOffset || 10), audio.duration || 0);
+        });
+        navigator.mediaSession.setActionHandler('seekto', (details) => {
+          if (details.seekTime !== undefined) audio.currentTime = details.seekTime;
+        });
+      }
+    };
+
+    // If currently playing this specific article, restore UI state
+    const isCurrentPlaying = audio.dataset.currentArticleId === String(articleId);
+    if (isCurrentPlaying) {
+      podcastCard.style.display = 'block';
+      podcastBtn.classList.add('is-open');
+      updatePlayStateUi(!audio.paused);
+      if (durationEl && audio.duration) durationEl.textContent = formatTime(audio.duration);
+      if (currentTimeEl) currentTimeEl.textContent = formatTime(audio.currentTime);
+      if (progressFill && audio.duration) {
+        progressFill.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
+      }
+      if (speedBtn && audio.playbackRate) {
+        speedBtn.textContent = `${audio.playbackRate}x`;
+      }
+    }
+
+    closeBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      podcastCard.style.display = 'none';
+      podcastBtn.classList.remove('is-open');
+    });
+
+    const startPlayback = () => {
+      loadingEl.style.display = 'flex';
+      playerUi.style.opacity = '0.5';
+
+      audio.src = podcastUrl;
+      audio.dataset.currentArticleId = String(articleId);
+      audio.play().catch((err) => {
+        console.warn('[Podcast] Play error:', err);
+      });
+      setupMediaSession();
+    };
+
+    podcastBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = podcastCard.style.display !== 'none';
+
+      if (!isOpen) {
+        podcastCard.style.display = 'block';
+        podcastBtn.classList.add('is-open');
+      }
+
+      if (audio.dataset.currentArticleId !== String(articleId)) {
+        startPlayback();
+      } else {
+        if (audio.paused) {
+          audio.play().catch(() => {});
+        } else if (isOpen) {
+          audio.pause();
+        }
+      }
+    });
+
+    playPauseBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (audio.dataset.currentArticleId !== String(articleId)) {
+        startPlayback();
+      } else {
+        if (audio.paused) {
+          audio.play().catch(() => {});
+        } else {
+          audio.pause();
+        }
+      }
+    });
+
+    rewindBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (audio.dataset.currentArticleId === String(articleId)) {
+        audio.currentTime = Math.max(audio.currentTime - 10, 0);
+      }
+    });
+
+    forwardBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (audio.dataset.currentArticleId === String(articleId)) {
+        audio.currentTime = Math.min(audio.currentTime + 10, audio.duration || 0);
+      }
+    });
+
+    const speeds = [1, 1.25, 1.5, 1.75, 2];
+    speedBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const currentRate = audio.playbackRate || 1;
+      const nextIdx = (speeds.indexOf(currentRate) + 1) % speeds.length;
+      const nextRate = speeds[nextIdx];
+      audio.playbackRate = nextRate;
+      speedBtn.textContent = `${nextRate}x`;
+    });
+
+    progressTrack?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (audio.dataset.currentArticleId === String(articleId) && audio.duration) {
+        const rect = progressTrack.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        audio.currentTime = ratio * audio.duration;
+      }
+    });
+
+    // Audio lifecycle events
+    const onPlay = () => {
+      if (audio.dataset.currentArticleId === String(articleId)) {
+        updatePlayStateUi(true);
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+      }
+    };
+
+    const onPause = () => {
+      if (audio.dataset.currentArticleId === String(articleId)) {
+        updatePlayStateUi(false);
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      }
+    };
+
+    const onTimeUpdate = () => {
+      if (audio.dataset.currentArticleId === String(articleId)) {
+        if (currentTimeEl) currentTimeEl.textContent = formatTime(audio.currentTime);
+        if (progressFill && audio.duration) {
+          progressFill.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
+        }
+        if ('mediaSession' in navigator && audio.duration && !isNaN(audio.duration)) {
+          try {
+            navigator.mediaSession.setPositionState({
+              duration: audio.duration,
+              playbackRate: audio.playbackRate || 1,
+              position: audio.currentTime
+            });
+          } catch {}
+        }
+      }
+    };
+
+    const onLoadedMetadata = () => {
+      if (audio.dataset.currentArticleId === String(articleId)) {
+        loadingEl.style.display = 'none';
+        playerUi.style.opacity = '1';
+        if (durationEl) durationEl.textContent = formatTime(audio.duration);
+      }
+    };
+
+    const onEnded = () => {
+      if (audio.dataset.currentArticleId === String(articleId)) {
+        updatePlayStateUi(false);
+        if (progressFill) progressFill.style.width = '0%';
+        if (currentTimeEl) currentTimeEl.textContent = '00:00';
+      }
+    };
+
+    const onError = (e) => {
+      if (audio.dataset.currentArticleId === String(articleId)) {
+        loadingEl.style.display = 'none';
+        playerUi.style.opacity = '1';
+        console.warn('[Podcast] Audio load error:', e);
+      }
+    };
+
+    audio.addEventListener('play', onPlay);
+    audio.addEventListener('pause', onPause);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.addEventListener('canplay', onLoadedMetadata);
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
+  };
+
   window.openArticleModal = async (id, highlightType = null, highlightId = null) => {
     if (!articleOverlay || !articleReader || !id) return;
     articleOpenedAt = Date.now();
@@ -2056,6 +2365,7 @@ document.addEventListener('DOMContentLoaded', () => {
       wireVerificationAction(id);
       wireImageOriginalityModActions(id);
       wireArticleSummary(id);
+      wireArticlePodcast(id, data);
       recordArticleView(data);
 
       // Auto-poll to update originality badges live if any are pending

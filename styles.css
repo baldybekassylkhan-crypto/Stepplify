@@ -5111,12 +5111,270 @@ body.map-page {
   margin-bottom: 1.2rem;
 }
 
-/* AI Summary Section under publication */
+/* AI Summary & Podcast Section under publication */
 .article-summary-box {
   margin: 0 0 1.6rem;
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+}
+
+.article-tools-buttons-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.article-podcast-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(6, 182, 212, 0.18) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #d1fae5;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 8px 18px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 3px 12px rgba(16, 185, 129, 0.15);
+}
+
+.article-podcast-btn:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.28) 0%, rgba(6, 182, 212, 0.32) 100%);
+  border-color: rgba(52, 211, 153, 0.7);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+}
+
+.article-podcast-btn.is-open {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.28) 0%, rgba(6, 182, 212, 0.28) 100%);
+  border-color: rgba(52, 211, 153, 0.65);
+}
+
+.article-podcast-btn.is-playing {
+  border-color: #10b981;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+}
+
+.podcast-btn-icon {
+  width: 17px;
+  height: 17px;
+  color: #34d399;
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s ease;
+}
+
+.article-podcast-btn:hover .podcast-btn-icon {
+  color: #a7f3d0;
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.8));
+}
+
+.article-podcast-btn.is-playing .podcast-btn-icon {
+  animation: pulse-headphones 1.6s infinite ease-in-out;
+}
+
+@keyframes pulse-headphones {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(52, 211, 153, 0.5)); }
+  50% { transform: scale(1.18); filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.9)); }
+}
+
+/* Podcast Card */
+.article-podcast-card {
+  background: rgba(15, 23, 28, 0.92);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-left: 3px solid #10b981;
+  border-radius: 14px;
+  padding: 1.1rem 1.3rem;
+  animation: summary-appear 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+}
+
+.podcast-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.podcast-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #a7f3d0;
+  flex-wrap: wrap;
+}
+
+.podcast-header-icon {
+  width: 16px;
+  height: 16px;
+  color: #34d399;
+  flex-shrink: 0;
+}
+
+.podcast-badge-phone {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.podcast-close-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.podcast-close-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.podcast-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.88rem;
+  padding: 0.6rem 0;
+}
+
+.podcast-loading-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(16, 185, 129, 0.25);
+  border-top-color: #34d399;
+  border-radius: 50%;
+  animation: summary-spin 0.75s linear infinite;
+  flex-shrink: 0;
+}
+
+.podcast-timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+
+.podcast-time {
+  font-family: monospace;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.65);
+  min-width: 40px;
+}
+
+.podcast-progress-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  transition: height 0.15s ease;
+}
+
+.podcast-progress-track:hover {
+  height: 8px;
+}
+
+.podcast-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #10b981 0%, #06b6d4 100%);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.podcast-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.podcast-main-play-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+}
+
+.podcast-main-play-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.55);
+}
+
+.podcast-ctrl-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.podcast-ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.podcast-speed-btn {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+  padding: 6px 11px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  min-width: 44px;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.podcast-speed-btn:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #34d399;
+  color: #fff;
 }
 
 .article-summary-btn {
