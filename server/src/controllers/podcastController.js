@@ -15,16 +15,16 @@ if (!fs.existsSync(podcastsDir)) {
 }
 
 export const PRESET_VOICES = {
+  antoni: { id: 'ErXwobaYiN019PkySvjV', name: 'Антони (KZ / RU)', desc: 'Казахский и русский' },
   george: { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'Джордж', desc: 'Теплый рассказчик' },
   brian: { id: 'nPczCjzI2devNBz1zQrb', name: 'Брайан', desc: 'Спокойный диктор' },
-  antoni: { id: 'ErXwobaYiN019PkySvjV', name: 'Антони', desc: 'Мягкий молодой' },
   lily: { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Лили', desc: 'Бархатный женский' },
 };
 
 export const getPresetVoices = (req, res) => {
   return res.json({
     success: true,
-    default: 'george',
+    default: 'antoni',
     voices: PRESET_VOICES,
   });
 };
@@ -65,11 +65,11 @@ async function generateElevenLabsAudio(text, apiKey, voiceId = 'JBFqnCBsd6RMkjVD
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
         text: chunk,
-        model_id: 'eleven_multilingual_v2',
+        model_id: 'eleven_turbo_v2_5',
         voice_settings: {
-          stability: 0.65,
-          similarity_boost: 0.85,
-          style: 0.1,
+          stability: 0.6,
+          similarity_boost: 0.8,
+          style: 0.05,
           use_speaker_boost: true,
         },
       },
@@ -89,9 +89,25 @@ async function generateElevenLabsAudio(text, apiKey, voiceId = 'JBFqnCBsd6RMkjVD
   return Buffer.concat(buffers);
 }
 
-// Fallback Google TTS
+// Fallback Google TTS (with Kazakh character phonetic normalization for Cyrillic engine)
+function normalizeKazakhForFallback(text) {
+  const map = {
+    'ә': 'а', 'Ә': 'А',
+    'і': 'и', 'І': 'И',
+    'ң': 'нг', 'Ң': 'Нг',
+    'ғ': 'г', 'Ғ': 'Г',
+    'ү': 'у', 'Ү': 'У',
+    'ұ': 'у', 'Ұ': 'У',
+    'қ': 'к', 'Қ': 'К',
+    'ө': 'о', 'Ө': 'О',
+    'һ': 'х', 'Һ': 'Х',
+  };
+  return text.replace(/[әіңғүұқөһӘІҢҒҮҰҚӨҺ]/g, (ch) => map[ch] || ch);
+}
+
 function splitTextForGoogleTts(text, maxLen = 180) {
-  const sentences = text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [text];
+  const clean = normalizeKazakhForFallback(text);
+  const sentences = clean.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [clean];
   const chunks = [];
   for (let s of sentences) {
     s = s.trim();
@@ -158,7 +174,7 @@ export const getArticlePodcastAudio = async (req, res) => {
 
     // Determine voice choice
     const requestedVoice = (req.query.voice || '').toLowerCase();
-    const voiceKey = PRESET_VOICES[requestedVoice] ? requestedVoice : 'george';
+    const voiceKey = PRESET_VOICES[requestedVoice] ? requestedVoice : 'antoni';
     const voiceInfo = PRESET_VOICES[voiceKey];
     const elevenVoiceId = voiceInfo.id;
 

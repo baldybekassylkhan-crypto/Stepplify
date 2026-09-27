@@ -2124,13 +2124,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!podcastBtn || !podcastCard) return;
 
     const voiceList = [
+      { key: 'antoni', name: 'Антони (KZ/RU)' },
       { key: 'george', name: 'Джордж' },
       { key: 'brian', name: 'Брайан' },
-      { key: 'antoni', name: 'Антони' },
       { key: 'lily', name: 'Лили' },
     ];
 
-    let currentVoiceKey = localStorage.getItem('stepplify_podcast_voice') || 'george';
+    let currentVoiceKey = localStorage.getItem('stepplify_podcast_voice') || 'antoni';
     const activeVoice = voiceList.find(v => v.key === currentVoiceKey) || voiceList[0];
     if (voiceNameEl) voiceNameEl.textContent = activeVoice.name;
 
