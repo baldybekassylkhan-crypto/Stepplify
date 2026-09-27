@@ -1597,6 +1597,10 @@ document.addEventListener('DOMContentLoaded', () => {
     <span>${isFav ? 'В избранном' : 'В избранное'}</span>`;
 
   const renderArticleReader = (a) => {
+    const cachedUser = JSON.parse(localStorage.getItem('stepplify_user') || 'null');
+    const isOwner = !!cachedUser && (cachedUser.id === a.authorId || cachedUser.role === 'moderator' || cachedUser.role === 'admin');
+    const isMod = !!cachedUser && (cachedUser.role === 'moderator' || cachedUser.role === 'admin');
+
     const images = Array.isArray(a.images) ? a.images : [];
     const originality = Array.isArray(a.imageOriginality) ? a.imageOriginality : [];
 
@@ -1620,13 +1624,23 @@ document.addEventListener('DOMContentLoaded', () => {
               Проверяется...
             </div>`;
           }
-          return `<div class="img-originality-wrap"><img src="${src}" alt="" loading="lazy" />${badge}</div>`;
+
+          const modControls = isMod ? `
+            <div class="img-mod-ctrls" data-img-src="${src}">
+              <span class="img-mod-label">Модератор:</span>
+              <button type="button" class="img-mod-btn img-mod-btn--orig ${info && info.isOriginal === true ? 'is-active' : ''}" data-val="true" title="Утвердить как оригинальное фото">
+                ✓ Оригинал
+              </button>
+              <button type="button" class="img-mod-btn img-mod-btn--fake ${info && info.isOriginal === false ? 'is-active' : ''}" data-val="false" title="Отметить как не оригинальное фото">
+                ✕ Не оригинал
+              </button>
+            </div>
+          ` : '';
+
+          return `<div class="img-originality-wrap"><img src="${src}" alt="" loading="lazy" />${badge}${modControls}</div>`;
         }).join('')}</div>`
       : '';
     const metaLine = [a.meta, a.region, a.locationName].filter(Boolean).join(' · ');
-    const cachedUser = JSON.parse(localStorage.getItem('stepplify_user') || 'null');
-    const isOwner = !!cachedUser && (cachedUser.id === a.authorId || cachedUser.role === 'moderator' || cachedUser.role === 'admin');
-    const isMod = !!cachedUser && (cachedUser.role === 'moderator' || cachedUser.role === 'admin');
 
     const ownerActions = isOwner
       ? `<div class="article-owner-actions">
@@ -1830,6 +1844,66 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  const wireImageOriginalityModActions = (articleId) => {
+    const modCtrls = articleReader.querySelectorAll('.img-mod-ctrls');
+    if (!modCtrls.length) return;
+
+    modCtrls.forEach((ctrl) => {
+      const imgSrc = ctrl.dataset.imgSrc;
+      const origBtn = ctrl.querySelector('.img-mod-btn--orig');
+      const fakeBtn = ctrl.querySelector('.img-mod-btn--fake');
+
+      const handleModChange = async (isOriginal) => {
+        const token = localStorage.getItem('stepplify_token');
+        if (!token) return;
+
+        origBtn.disabled = true;
+        fakeBtn.disabled = true;
+
+        try {
+          const res = await fetch(`${API_URL}/articles/${articleId}/image-originality`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ url: imgSrc, isOriginal })
+          });
+          const resData = await res.json();
+          if (!res.ok) throw new Error(resData.error || 'Ошибка при сохранении статуса');
+
+          // Highlight the clicked button
+          origBtn.classList.toggle('is-active', isOriginal === true);
+          fakeBtn.classList.toggle('is-active', isOriginal === false);
+
+          // Update the badge element above
+          const badgeEl = articleReader.querySelector(`.img-originality-badge[data-img-src="${imgSrc}"]`);
+          if (badgeEl) {
+            badgeEl.className = `img-originality-badge ${isOriginal ? 'img-originality-original' : 'img-originality-notoriginal'}`;
+            badgeEl.innerHTML = isOriginal
+              ? `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm3.28 5.78-3.75 3.75a.75.75 0 0 1-1.06 0l-1.75-1.75a.75.75 0 1 1 1.06-1.06l1.22 1.22 3.22-3.22a.75.75 0 1 1 1.06 1.06z"/></svg> Оригинальное фото`
+              : `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM7.25 4.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5zm.75 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg> Не оригинальное фото`;
+            badgeEl.title = isOriginal ? 'Подтверждено модератором' : 'Отклонено модератором (не оригинальное)';
+          }
+        } catch (err) {
+          alert('Ошибка обновления статуса фото: ' + err.message);
+        } finally {
+          origBtn.disabled = false;
+          fakeBtn.disabled = false;
+        }
+      };
+
+      origBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleModChange(true);
+      });
+      fakeBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleModChange(false);
+      });
+    });
+  };
+
   window.openArticleModal = async (id, highlightType = null, highlightId = null) => {
     if (!articleOverlay || !articleReader || !id) return;
     articleOpenedAt = Date.now();
@@ -1855,6 +1929,7 @@ document.addEventListener('DOMContentLoaded', () => {
       wireFavoriteAction(id, data);
       wireOwnerActions(id, data);
       wireVerificationAction(id);
+      wireImageOriginalityModActions(id);
       recordArticleView(data);
 
       // Auto-poll to update originality badges live if any are pending

@@ -729,3 +729,66 @@ export const updateVerificationScore = async (req, res) => {
     return res.status(500).json({ error: 'Ошибка при обновлении оценки достоверности.' });
   }
 };
+
+// 14. UpdateImageOriginality - moderator manually overrides or sets originality of an image
+export const updateImageOriginality = async (req, res) => {
+  try {
+    const articleId = parseInt(req.params.id);
+    const { url, isOriginal, reason } = req.body;
+
+    if (isNaN(articleId) || !url || typeof isOriginal !== 'boolean') {
+      return res.status(400).json({ error: 'Укажите корректный URL изображения и статус оригинальности (true/false).' });
+    }
+
+    const userInDb = await prisma.user.findUnique({ where: { id: req.user.id }, select: { role: true } });
+    const userRole = userInDb ? userInDb.role : (req.user ? req.user.role : 'user');
+    const isMod = userRole === 'moderator' || userRole === 'admin';
+
+    if (!isMod) {
+      return res.status(403).json({ error: 'Только модераторы могут изменять статус оригинальности фото.' });
+    }
+
+    const article = await prisma.article.findUnique({ where: { id: articleId } });
+    if (!article) {
+      return res.status(404).json({ error: 'Статья не найдена.' });
+    }
+
+    let origList = [];
+    try {
+      origList = JSON.parse(article.imageOriginality || '[]');
+    } catch {
+      origList = [];
+    }
+
+    const idx = origList.findIndex(o => o.url === url);
+    const updatedItem = {
+      url,
+      isOriginal,
+      confidence: 'manual',
+      reason: reason || (isOriginal ? 'Подтверждено модератором' : 'Отклонено модератором (не оригинальное)'),
+      moderatedBy: req.user.id,
+      moderatedAt: new Date().toISOString(),
+    };
+
+    if (idx !== -1) {
+      origList[idx] = { ...origList[idx], ...updatedItem };
+    } else {
+      origList.push(updatedItem);
+    }
+
+    await prisma.article.update({
+      where: { id: articleId },
+      data: { imageOriginality: JSON.stringify(origList) },
+    });
+
+    console.log(`[Moderation] Image originality updated for article #${articleId}, image ${url} -> ${isOriginal} by user #${req.user.id}`);
+
+    return res.json({
+      message: 'Статус оригинальности фото успешно обновлен!',
+      imageOriginality: origList,
+    });
+  } catch (error) {
+    console.error('Error in UpdateImageOriginality:', error);
+    return res.status(500).json({ error: 'Ошибка при обновлении статуса фото.' });
+  }
+};

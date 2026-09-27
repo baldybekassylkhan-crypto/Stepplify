@@ -5,7 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 import { registerUser, loginUser, getUserProfile, updateAvatar, updateProfile, updateUserRole } from '../controllers/authController.js';
-import { createArticle, getAllArticles, getRecentArticles, incrementViews, getArticleById, rateArticle, replyToReview, updateArticle, deleteArticle, deleteReview, deleteReply, editReply, updateVerificationScore } from '../controllers/articleController.js';
+import { createArticle, getAllArticles, getRecentArticles, incrementViews, getArticleById, rateArticle, replyToReview, updateArticle, deleteArticle, deleteReview, deleteReply, editReply, updateVerificationScore, updateImageOriginality } from '../controllers/articleController.js';
 import { toggleFavorite, getUserFavorites } from '../controllers/favoriteController.js';
 import { addPoints, getMonthlyTop, getSchoolLeaderboard, getWinnersList } from '../controllers/gamificationController.js';
 import { searchUsers, sendFriendRequest, respondToFriendRequest, removeFriendship, listFriends, getPublicUserProfile } from '../controllers/friendController.js';
@@ -68,6 +68,7 @@ router.delete('/articles/:id/rate', authenticateToken, deleteReview);
 router.delete('/articles/:id/replies/:replyId', authenticateToken, deleteReply);
 router.put('/articles/:id/replies/:replyId', authenticateToken, editReply);
 router.put('/articles/:id/verification', authenticateToken, updateVerificationScore);
+router.put('/articles/:id/image-originality', authenticateToken, updateImageOriginality);
 router.post('/articles/:id/favorite', authenticateToken, toggleFavorite);
 router.get('/favorites', authenticateToken, getUserFavorites);
 router.put('/articles/:id', authenticateToken, upload.array('images', 3), updateArticle);
