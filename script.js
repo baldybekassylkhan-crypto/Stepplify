@@ -1773,7 +1773,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
               </svg>
               <span>Подкаст статьи</span>
-              <span class="podcast-badge-phone">🎧 играет в фоне и при выключенном экране</span>
+              <span class="podcast-badge-phone">играет в фоне и при выключенном экране</span>
             </div>
             <button type="button" class="podcast-close-btn" id="podcastCloseBtn" title="Скрыть плеер">&times;</button>
           </div>
