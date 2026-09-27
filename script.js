@@ -617,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   updateNavFromStorage();
 
-  // A stale token in localStorage (past its 7-day expiry, or left over
+  // A stale token in localStorage (past its 30-day expiry, or left over
   // from an old session) used to leave whichever modal hit it stuck on
   // a raw "Недействительный или истекший токен." with no way out short
   // of the reader finding the logout link themselves — reloading the

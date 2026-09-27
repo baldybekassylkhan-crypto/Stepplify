@@ -68,7 +68,7 @@ export const registerUser = async (req, res) => {
     const token = jwt.sign(
       { id: newUser.id, email: newUser.email, role: newUser.role },
       process.env.JWT_SECRET || 'stepplify_secret_jwt_key_2026',
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     return res.status(201).json({
@@ -107,7 +107,7 @@ export const loginUser = async (req, res) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'stepplify_secret_jwt_key_2026',
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     const { passwordHash, ...userWithoutPassword } = user;
