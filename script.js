@@ -1607,23 +1607,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const gallery = images.length
       ? `<div class="article-reader-gallery">${images.map((src, i) => {
           const info = originality.find(o => o.url === src) || originality[i] || null;
-          let badge = '';
+          let badgeContent = '';
+          let badgeClass = '';
+
           if (info && info.isOriginal === true) {
-            badge = `<div class="img-originality-badge img-originality-original" data-img-src="${src}">
+            badgeClass = 'img-originality-original';
+            badgeContent = `
               <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm3.28 5.78-3.75 3.75a.75.75 0 0 1-1.06 0l-1.75-1.75a.75.75 0 1 1 1.06-1.06l1.22 1.22 3.22-3.22a.75.75 0 1 1 1.06 1.06z"/></svg>
-              Оригинальное фото
-            </div>`;
+              <span class="img-originality-text">Оригинальное фото</span>
+            `;
           } else if (info && info.isOriginal === false) {
-            badge = `<div class="img-originality-badge img-originality-notoriginal" data-img-src="${src}" title="${escapeHtml(info.reason || '')}">
+            badgeClass = 'img-originality-notoriginal';
+            badgeContent = `
               <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM7.25 4.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5zm.75 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>
-              Не оригинальное фото
-            </div>`;
+              <span class="img-originality-text">Не оригинальное фото</span>
+            `;
           } else {
-            badge = `<div class="img-originality-badge img-originality-pending" data-img-src="${src}">
+            badgeClass = 'img-originality-pending';
+            badgeContent = `
               <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" class="spin-icon"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 3.5a.75.75 0 0 1 .75.75v3.5l2 1.15a.75.75 0 1 1-.75 1.3L7.5 9.5a.75.75 0 0 1-.75-.75V5.25A.75.75 0 0 1 8 4.5z"/></svg>
-              Проверяется...
-            </div>`;
+              <span class="img-originality-text">Проверяется...</span>
+            `;
           }
+
+          const caretBtn = isMod ? `
+            <button type="button" class="img-mod-toggle-btn" data-img-src="${src}" title="Изменить статус (Модератор)" aria-label="Развернуть меню модератора">
+              <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor" class="img-mod-chevron"><path d="M4.427 6.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 6H4.604a.25.25 0 00-.177.427z"/></svg>
+            </button>
+          ` : '';
+
+          const badge = `<div class="img-originality-badge ${badgeClass}" data-img-src="${src}" title="${escapeHtml(info && info.reason ? info.reason : '')}">
+            ${badgeContent}
+            ${caretBtn}
+          </div>`;
 
           const modControls = isMod ? `
             <div class="img-mod-ctrls" data-img-src="${src}">
@@ -1637,7 +1653,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           ` : '';
 
-          return `<div class="img-originality-wrap"><img src="${src}" alt="" loading="lazy" />${badge}${modControls}</div>`;
+          return `<div class="img-originality-wrap" data-img-src="${src}"><img src="${src}" alt="" loading="lazy" />${badge}${modControls}</div>`;
         }).join('')}</div>`
       : '';
     const metaLine = [a.meta, a.region, a.locationName].filter(Boolean).join(' · ');
@@ -1845,13 +1861,24 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const wireImageOriginalityModActions = (articleId) => {
-    const modCtrls = articleReader.querySelectorAll('.img-mod-ctrls');
-    if (!modCtrls.length) return;
+    const wraps = articleReader.querySelectorAll('.img-originality-wrap');
+    if (!wraps.length) return;
 
-    modCtrls.forEach((ctrl) => {
-      const imgSrc = ctrl.dataset.imgSrc;
-      const origBtn = ctrl.querySelector('.img-mod-btn--orig');
-      const fakeBtn = ctrl.querySelector('.img-mod-btn--fake');
+    wraps.forEach((wrap) => {
+      const toggleBtn = wrap.querySelector('.img-mod-toggle-btn');
+      const ctrls = wrap.querySelector('.img-mod-ctrls');
+      if (!toggleBtn || !ctrls) return;
+
+      const imgSrc = ctrls.dataset.imgSrc;
+      const origBtn = ctrls.querySelector('.img-mod-btn--orig');
+      const fakeBtn = ctrls.querySelector('.img-mod-btn--fake');
+
+      // Toggle dropdown open/close on caret click
+      toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = ctrls.classList.toggle('is-open');
+        toggleBtn.classList.toggle('is-open', isOpen);
+      });
 
       const handleModChange = async (isOriginal) => {
         const token = localStorage.getItem('stepplify_token');
@@ -1877,12 +1904,19 @@ document.addEventListener('DOMContentLoaded', () => {
           fakeBtn.classList.toggle('is-active', isOriginal === false);
 
           // Update the badge element above
-          const badgeEl = articleReader.querySelector(`.img-originality-badge[data-img-src="${imgSrc}"]`);
+          const badgeEl = wrap.querySelector('.img-originality-badge');
           if (badgeEl) {
             badgeEl.className = `img-originality-badge ${isOriginal ? 'img-originality-original' : 'img-originality-notoriginal'}`;
-            badgeEl.innerHTML = isOriginal
-              ? `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm3.28 5.78-3.75 3.75a.75.75 0 0 1-1.06 0l-1.75-1.75a.75.75 0 1 1 1.06-1.06l1.22 1.22 3.22-3.22a.75.75 0 1 1 1.06 1.06z"/></svg> Оригинальное фото`
-              : `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM7.25 4.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5zm.75 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg> Не оригинальное фото`;
+            const textEl = badgeEl.querySelector('.img-originality-text');
+            if (textEl) {
+              textEl.textContent = isOriginal ? 'Оригинальное фото' : 'Не оригинальное фото';
+            }
+            const firstSvg = badgeEl.querySelector('svg:not(.img-mod-chevron)');
+            if (firstSvg) {
+              firstSvg.outerHTML = isOriginal
+                ? `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm3.28 5.78-3.75 3.75a.75.75 0 0 1-1.06 0l-1.75-1.75a.75.75 0 1 1 1.06-1.06l1.22 1.22 3.22-3.22a.75.75 0 1 1 1.06 1.06z"/></svg>`
+                : `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM7.25 4.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5zm.75 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>`;
+            }
             badgeEl.title = isOriginal ? 'Подтверждено модератором' : 'Отклонено модератором (не оригинальное)';
           }
         } catch (err) {
@@ -1953,14 +1987,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 refreshed.images.forEach((src, idx) => {
                   const info = orig.find(o => o.url === src) || orig[idx];
                   if (info && typeof info.isOriginal === 'boolean') {
-                    const badgeEl = articleReader.querySelector(`[data-img-src="${src}"]`);
+                    const badgeEl = articleReader.querySelector(`.img-originality-badge[data-img-src="${src}"]`);
                     if (badgeEl && badgeEl.classList.contains('img-originality-pending')) {
                       badgeEl.className = `img-originality-badge ${info.isOriginal ? 'img-originality-original' : 'img-originality-notoriginal'}`;
-                      badgeEl.innerHTML = info.isOriginal
-                        ? `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm3.28 5.78-3.75 3.75a.75.75 0 0 1-1.06 0l-1.75-1.75a.75.75 0 1 1 1.06-1.06l1.22 1.22 3.22-3.22a.75.75 0 1 1 1.06 1.06z"/></svg> Оригинальное фото`
-                        : `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM7.25 4.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5zm.75 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg> Не оригинальное фото`;
+                      const textEl = badgeEl.querySelector('.img-originality-text');
+                      if (textEl) {
+                        textEl.textContent = info.isOriginal ? 'Оригинальное фото' : 'Не оригинальное фото';
+                      }
+                      const firstSvg = badgeEl.querySelector('svg:not(.img-mod-chevron)');
+                      if (firstSvg) {
+                        firstSvg.outerHTML = info.isOriginal
+                          ? `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm3.28 5.78-3.75 3.75a.75.75 0 0 1-1.06 0l-1.75-1.75a.75.75 0 1 1 1.06-1.06l1.22 1.22 3.22-3.22a.75.75 0 1 1 1.06 1.06z"/></svg>`
+                          : `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM7.25 4.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5zm.75 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>`;
+                      }
                       if (!info.isOriginal && info.reason) {
                         badgeEl.title = info.reason;
+                      }
+
+                      // Also sync mod buttons if present
+                      const wrap = badgeEl.closest('.img-originality-wrap');
+                      const origBtn = wrap?.querySelector('.img-mod-btn--orig');
+                      const fakeBtn = wrap?.querySelector('.img-mod-btn--fake');
+                      if (origBtn && fakeBtn) {
+                        origBtn.classList.toggle('is-active', info.isOriginal === true);
+                        fakeBtn.classList.toggle('is-active', info.isOriginal === false);
                       }
                     }
                   }

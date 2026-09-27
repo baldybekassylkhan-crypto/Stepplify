@@ -4578,16 +4578,59 @@ body.map-page {
 }
 
 /* ── Moderator photo controls ── */
-.img-mod-ctrls {
+.img-mod-toggle-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 3px 6px;
-  width: fit-content;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: inherit;
+  opacity: 0.75;
+  padding: 0 2px;
+  margin-left: 4px;
+  cursor: pointer;
+  line-height: 1;
 }
+.img-mod-toggle-btn:hover {
+  opacity: 1;
+}
+.img-mod-toggle-btn .img-mod-chevron {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: rotate(0deg);
+}
+.img-mod-toggle-btn.is-open .img-mod-chevron {
+  transform: rotate(180deg);
+}
+
+.img-mod-ctrls {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  background: rgba(22, 22, 34, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 4px 8px;
+  width: fit-content;
+  margin-top: 2px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+.img-mod-ctrls.is-open {
+  display: inline-flex;
+  animation: fadeInModCtrls 0.2s ease forwards;
+}
+
+@keyframes fadeInModCtrls {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .img-mod-label {
   font-size: 0.68rem;
   color: rgba(255, 255, 255, 0.5);
