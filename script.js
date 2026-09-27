@@ -1729,6 +1729,25 @@ document.addEventListener('DOMContentLoaded', () => {
       ${modVerificationBox}
       <div class="article-reader-stats">👁 <span id="articleViewsValue">${escapeHtml(String(a.viewsFormatted ?? a.views ?? 0))}</span></div>
       <div class="article-reader-body">${escapeHtml(a.content).replace(/\n/g, '<br>')}</div>
+      <div class="article-summary-box" id="articleSummaryBox" data-article-id="${a.id}">
+        <button type="button" class="article-summary-btn" id="articleSummaryBtn" title="Краткий пересказ с помощью ИИ">
+          <span class="summary-btn-sparkle">✨</span>
+          <span class="summary-btn-text">Краткий пересказ</span>
+          <span class="summary-btn-tag">ИИ</span>
+        </button>
+
+        <div class="article-summary-result" id="articleSummaryResult" style="display: none;">
+          <div class="summary-result-header">
+            <div class="summary-result-title">
+              <span class="summary-result-icon">✨</span>
+              <span>Краткий пересказ от ИИ</span>
+              <span class="summary-word-badge" id="summaryWordBadge">&lt; 100 слов</span>
+            </div>
+            <button type="button" class="summary-close-btn" id="summaryCloseBtn" title="Скрыть">&times;</button>
+          </div>
+          <div class="summary-result-content" id="summaryResultContent"></div>
+        </div>
+      </div>
       <div class="article-reader-rating" id="articleReaderRating">${renderRatingBlock(a.rating)}</div>
       <div class="article-reviews" id="articleReviews">${renderReviewsList(a.reviews)}</div>`;
   };
@@ -1929,6 +1948,80 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  const wireArticleSummary = (articleId) => {
+    const summaryBtn = document.getElementById('articleSummaryBtn');
+    const resultBox = document.getElementById('articleSummaryResult');
+    const contentEl = document.getElementById('summaryResultContent');
+    const closeBtn = document.getElementById('summaryCloseBtn');
+    const wordBadge = document.getElementById('summaryWordBadge');
+    if (!summaryBtn || !resultBox || !contentEl) return;
+
+    let cachedSummary = null;
+
+    closeBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resultBox.style.display = 'none';
+      summaryBtn.classList.remove('is-open');
+    });
+
+    summaryBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+
+      // If already shown and open, toggle close
+      if (resultBox.style.display !== 'none' && cachedSummary) {
+        resultBox.style.display = 'none';
+        summaryBtn.classList.remove('is-open');
+        return;
+      }
+
+      // If cached locally, show immediately
+      if (cachedSummary) {
+        resultBox.style.display = 'block';
+        summaryBtn.classList.add('is-open');
+        contentEl.innerHTML = `<p class="summary-text">${escapeHtml(cachedSummary)}</p>`;
+        return;
+      }
+
+      // Loading state
+      summaryBtn.disabled = true;
+      summaryBtn.classList.add('is-loading');
+      resultBox.style.display = 'block';
+      summaryBtn.classList.add('is-open');
+      contentEl.innerHTML = `
+        <div class="summary-loading">
+          <div class="summary-loading-spinner"></div>
+          <span>ИИ составляет краткий пересказ публикации...</span>
+        </div>`;
+
+      try {
+        const token = localStorage.getItem('stepplify_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const res = await fetch(`${API_URL}/articles/${articleId}/summary`, {
+          method: 'POST',
+          headers,
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Ошибка при генерации пересказа');
+
+        cachedSummary = data.summary;
+        if (wordBadge && data.wordCount) {
+          wordBadge.textContent = `${data.wordCount} слов`;
+        }
+
+        contentEl.innerHTML = `<p class="summary-text">${escapeHtml(data.summary)}</p>`;
+      } catch (err) {
+        console.warn('Summary generation error:', err);
+        contentEl.innerHTML = `<p class="summary-error">Не удалось загрузить краткий пересказ: ${escapeHtml(err.message || 'попробуйте позже')}</p>`;
+      } finally {
+        summaryBtn.disabled = false;
+        summaryBtn.classList.remove('is-loading');
+      }
+    });
+  };
+
   window.openArticleModal = async (id, highlightType = null, highlightId = null) => {
     if (!articleOverlay || !articleReader || !id) return;
     articleOpenedAt = Date.now();
@@ -1955,6 +2048,7 @@ document.addEventListener('DOMContentLoaded', () => {
       wireOwnerActions(id, data);
       wireVerificationAction(id);
       wireImageOriginalityModActions(id);
+      wireArticleSummary(id);
       recordArticleView(data);
 
       // Auto-poll to update originality badges live if any are pending

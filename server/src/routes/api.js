@@ -9,7 +9,7 @@ import { createArticle, getAllArticles, getRecentArticles, incrementViews, getAr
 import { toggleFavorite, getUserFavorites } from '../controllers/favoriteController.js';
 import { addPoints, getMonthlyTop, getSchoolLeaderboard, getWinnersList } from '../controllers/gamificationController.js';
 import { searchUsers, sendFriendRequest, respondToFriendRequest, removeFriendship, listFriends, getPublicUserProfile } from '../controllers/friendController.js';
-import { aiEditDraft } from '../controllers/aiController.js';
+import { aiEditDraft, summarizeArticle } from '../controllers/aiController.js';
 import { generateTravelRoute, calculateTripCost } from '../controllers/travelController.js';
 import { sendSupportMessage } from '../controllers/supportController.js';
 import { createReport, getReports, updateReportStatus, getPendingReportsCount } from '../controllers/reportController.js';
@@ -74,6 +74,8 @@ router.get('/favorites', authenticateToken, getUserFavorites);
 router.put('/articles/:id', authenticateToken, upload.array('images', 3), updateArticle);
 router.delete('/articles/:id', authenticateToken, deleteArticle);
 router.get('/articles/:id', optionalAuth, getArticleById);
+router.post('/articles/:id/summary', optionalAuth, summarizeArticle);
+router.get('/articles/:id/summary', optionalAuth, summarizeArticle);
 
 router.post('/users/:userId/points', addPoints);
 router.get('/leaderboard/monthly', getMonthlyTop);

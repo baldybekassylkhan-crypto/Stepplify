@@ -1,4 +1,5 @@
 import axios from 'axios';
+import prisma from '../db.js';
 
 // Baseline word-boundary patterns used by the offline fallback (and as a
 // safety net even when an LLM is available) to flag Russian/English
@@ -306,6 +307,135 @@ export const checkImageOriginality = async (absoluteImagePath) => {
   } catch (err) {
     console.error('checkImageOriginality outer error:', err.message);
     return { isOriginal: null, confidence: 'low', reason: 'Не удалось проверить' };
+  }
+};
+
+// ─── Article Summary (< 100 words) ──────────────────────────────────────────
+const summaryCache = new Map();
+
+export const summarizeArticle = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const articleId = parseInt(id, 10);
+    if (!articleId) {
+      return res.status(400).json({ error: 'Некорректный ID публикации' });
+    }
+
+    const article = await prisma.article.findUnique({
+      where: { id: articleId },
+      select: { id: true, title: true, content: true, updatedAt: true },
+    });
+
+    if (!article) {
+      return res.status(404).json({ error: 'Публикация не найдена' });
+    }
+
+    const cacheKey = `summary_${article.id}_${article.updatedAt?.getTime() || 0}`;
+    if (summaryCache.has(cacheKey)) {
+      const cached = summaryCache.get(cacheKey);
+      return res.json({
+        success: true,
+        summary: cached,
+        wordCount: cached.split(/\s+/).filter(Boolean).length,
+        cached: true,
+      });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    let finalSummary = '';
+
+    if (apiKey) {
+      const prompt = `Ты — умный редактор платформы Stepplify о путешествиях и природе Казахстана.
+Составь лаконичный, информативный и интересный краткий пересказ следующей публикации.
+
+СТРОГИЕ ПРАВИЛА:
+1. Длина пересказа ДОЛЖНА БЫТЬ МЕНЬШЕ 100 СЛОВ (оптимально 40–70 слов).
+2. Передай суть: о чём публикация, ключевая локация/маршрут, главные советы или впечатления.
+3. Без шаблонных вступлений (не пиши «В этой статье...», «Автор рассказывает...»), сразу излагай суть.
+4. Пиши грамотным, живым и увлекательным русским языком.
+
+Заголовок: ${article.title}
+Текст публикации:
+${article.content}`;
+
+      const modelsToTry = [
+        process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
+        'gemini-3.8-flash',
+        'gemini-3.5-flash-lite',
+      ];
+
+      for (const model of modelsToTry) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+          const response = await axios.post(
+            url,
+            {
+              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 250,
+              },
+            },
+            { timeout: 15000 }
+          );
+
+          const raw = response.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (raw) {
+            finalSummary = raw;
+            break;
+          }
+        } catch (apiErr) {
+          console.warn(`[AI Summary] Model ${model} failed:`, apiErr.response?.data?.error?.message || apiErr.message);
+        }
+      }
+    }
+
+    // Heuristic fallback if AI is unavailable or fails
+    if (!finalSummary) {
+      const cleanContent = article.content.replace(/\s+/g, ' ').trim();
+      const sentences = cleanContent.match(/[^.!?]+[.!?]+/g) || [cleanContent];
+      let gathered = '';
+      let wordsCount = 0;
+      for (const s of sentences) {
+        const sWords = s.trim().split(/\s+/).filter(Boolean).length;
+        if (wordsCount + sWords <= 75) {
+          gathered += (gathered ? ' ' : '') + s.trim();
+          wordsCount += sWords;
+        } else {
+          break;
+        }
+      }
+      finalSummary = gathered || cleanContent.slice(0, 300) + '...';
+    }
+
+    // Hard constraint: ensure it is strictly LESS THAN 100 WORDS
+    const words = finalSummary.split(/\s+/).filter(Boolean);
+    if (words.length >= 100) {
+      let trimmed = '';
+      let wCount = 0;
+      const sentences = finalSummary.match(/[^.!?]+[.!?]+|\S+/g) || [finalSummary];
+      for (const s of sentences) {
+        const sWords = s.trim().split(/\s+/).filter(Boolean).length;
+        if (wCount + sWords < 90) {
+          trimmed += (trimmed ? ' ' : '') + s.trim();
+          wCount += sWords;
+        } else {
+          break;
+        }
+      }
+      finalSummary = trimmed || words.slice(0, 85).join(' ') + '...';
+    }
+
+    summaryCache.set(cacheKey, finalSummary);
+
+    return res.json({
+      success: true,
+      summary: finalSummary,
+      wordCount: finalSummary.split(/\s+/).filter(Boolean).length,
+    });
+  } catch (error) {
+    console.error('Error in summarizeArticle:', error.message);
+    return res.status(500).json({ error: 'Не удалось сгенерировать пересказ.' });
   }
 };
 
