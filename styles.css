@@ -5155,26 +5155,25 @@ body.map-page {
   cursor: wait;
 }
 
-.summary-btn-sparkle {
-  font-size: 1.05rem;
-  display: inline-block;
-  animation: pulse-sparkle 2.2s infinite ease-in-out;
+.summary-btn-icon {
+  width: 17px;
+  height: 17px;
+  color: #c084fc;
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s ease;
 }
 
-@keyframes pulse-sparkle {
-  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(192, 132, 252, 0.4)); }
-  50% { transform: scale(1.15); filter: drop-shadow(0 0 7px rgba(192, 132, 252, 0.9)); }
-}
-
-.summary-btn-tag {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  background: rgba(168, 85, 247, 0.35);
+.article-summary-btn:hover .summary-btn-icon {
   color: #e9d5ff;
-  padding: 2px 7px;
-  border-radius: 6px;
-  letter-spacing: 0.5px;
+  transform: scale(1.15) rotate(6deg);
+  filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.8));
+}
+
+.summary-header-icon {
+  width: 16px;
+  height: 16px;
+  color: #c084fc;
+  flex-shrink: 0;
 }
 
 .article-summary-result {

@@ -1730,17 +1730,24 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="article-reader-stats">👁 <span id="articleViewsValue">${escapeHtml(String(a.viewsFormatted ?? a.views ?? 0))}</span></div>
       <div class="article-reader-body">${escapeHtml(a.content).replace(/\n/g, '<br>')}</div>
       <div class="article-summary-box" id="articleSummaryBox" data-article-id="${a.id}">
-        <button type="button" class="article-summary-btn" id="articleSummaryBtn" title="Краткий пересказ с помощью ИИ">
-          <span class="summary-btn-sparkle">✨</span>
+        <button type="button" class="article-summary-btn" id="articleSummaryBtn" title="Краткий пересказ">
+          <svg class="summary-btn-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+            <path d="M5 3v4"/>
+            <path d="M19 17v4"/>
+            <path d="M3 5h4"/>
+            <path d="M17 19h4"/>
+          </svg>
           <span class="summary-btn-text">Краткий пересказ</span>
-          <span class="summary-btn-tag">ИИ</span>
         </button>
 
         <div class="article-summary-result" id="articleSummaryResult" style="display: none;">
           <div class="summary-result-header">
             <div class="summary-result-title">
-              <span class="summary-result-icon">✨</span>
-              <span>Краткий пересказ от ИИ</span>
+              <svg class="summary-header-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+              </svg>
+              <span>Краткий пересказ</span>
               <span class="summary-word-badge" id="summaryWordBadge">&lt; 100 слов</span>
             </div>
             <button type="button" class="summary-close-btn" id="summaryCloseBtn" title="Скрыть">&times;</button>
@@ -1990,7 +1997,7 @@ document.addEventListener('DOMContentLoaded', () => {
       contentEl.innerHTML = `
         <div class="summary-loading">
           <div class="summary-loading-spinner"></div>
-          <span>ИИ составляет краткий пересказ публикации...</span>
+          <span>Составляем краткий пересказ публикации...</span>
         </div>`;
 
       try {
