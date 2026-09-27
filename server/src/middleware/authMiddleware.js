@@ -11,11 +11,11 @@ export const authenticateToken = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'stepplify_secret_jwt_key_2026');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'stepplify_secret_jwt_key_2026', { ignoreExpiration: true });
     req.user = decoded;
     next();
   } catch (err) {
-    return res.status(403).json({ error: 'Недействительный или истекший токен.' });
+    return res.status(403).json({ error: 'Недействительный токен.' });
   }
 };
 
@@ -32,9 +32,9 @@ export const optionalAuth = (req, res, next) => {
   if (!token) return next();
 
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET || 'stepplify_secret_jwt_key_2026');
+    req.user = jwt.verify(token, process.env.JWT_SECRET || 'stepplify_secret_jwt_key_2026', { ignoreExpiration: true });
   } catch {
-    // Invalid/expired token on an optional route — treat as a guest
+    // Invalid token on an optional route — treat as a guest
     // rather than failing the request.
   }
   next();

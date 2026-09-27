@@ -1880,51 +1880,42 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleBtn.classList.toggle('is-open', isOpen);
       });
 
-      const handleModChange = async (isOriginal) => {
+      const handleModChange = (isOriginal) => {
         const token = localStorage.getItem('stepplify_token');
         if (!token) return;
 
-        origBtn.disabled = true;
-        fakeBtn.disabled = true;
+        // Optimistic UI update - instantaneous feedback
+        origBtn.classList.toggle('is-active', isOriginal === true);
+        fakeBtn.classList.toggle('is-active', isOriginal === false);
 
-        try {
-          const res = await fetch(`${API_URL}/articles/${articleId}/image-originality`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ url: imgSrc, isOriginal })
-          });
-          const resData = await res.json();
-          if (!res.ok) throw new Error(resData.error || 'Ошибка при сохранении статуса');
-
-          // Highlight the clicked button
-          origBtn.classList.toggle('is-active', isOriginal === true);
-          fakeBtn.classList.toggle('is-active', isOriginal === false);
-
-          // Update the badge element above
-          const badgeEl = wrap.querySelector('.img-originality-badge');
-          if (badgeEl) {
-            badgeEl.className = `img-originality-badge ${isOriginal ? 'img-originality-original' : 'img-originality-notoriginal'}`;
-            const textEl = badgeEl.querySelector('.img-originality-text');
-            if (textEl) {
-              textEl.textContent = isOriginal ? 'Оригинальное фото' : 'Не оригинальное фото';
-            }
-            const firstSvg = badgeEl.querySelector('svg:not(.img-mod-chevron)');
-            if (firstSvg) {
-              firstSvg.outerHTML = isOriginal
-                ? `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm3.28 5.78-3.75 3.75a.75.75 0 0 1-1.06 0l-1.75-1.75a.75.75 0 1 1 1.06-1.06l1.22 1.22 3.22-3.22a.75.75 0 1 1 1.06 1.06z"/></svg>`
-                : `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM7.25 4.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5zm.75 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>`;
-            }
-            badgeEl.title = isOriginal ? 'Подтверждено модератором' : 'Отклонено модератором (не оригинальное)';
+        // Update the badge element above immediately
+        const badgeEl = wrap.querySelector('.img-originality-badge');
+        if (badgeEl) {
+          badgeEl.className = `img-originality-badge ${isOriginal ? 'img-originality-original' : 'img-originality-notoriginal'}`;
+          const textEl = badgeEl.querySelector('.img-originality-text');
+          if (textEl) {
+            textEl.textContent = isOriginal ? 'Оригинальное фото' : 'Не оригинальное фото';
           }
-        } catch (err) {
-          alert('Ошибка обновления статуса фото: ' + err.message);
-        } finally {
-          origBtn.disabled = false;
-          fakeBtn.disabled = false;
+          const firstSvg = badgeEl.querySelector('svg:not(.img-mod-chevron)');
+          if (firstSvg) {
+            firstSvg.outerHTML = isOriginal
+              ? `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm3.28 5.78-3.75 3.75a.75.75 0 0 1-1.06 0l-1.75-1.75a.75.75 0 1 1 1.06-1.06l1.22 1.22 3.22-3.22a.75.75 0 1 1 1.06 1.06z"/></svg>`
+              : `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM7.25 4.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5zm.75 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>`;
+          }
+          badgeEl.title = isOriginal ? 'Подтверждено модератором' : 'Отклонено модератором (не оригинальное)';
         }
+
+        // Silent background sync - no intrusive alerts, smooth and fast
+        fetch(`${API_URL}/articles/${articleId}/image-originality`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ url: imgSrc, isOriginal })
+        }).catch((err) => {
+          console.warn('Background status sync error:', err);
+        });
       };
 
       origBtn?.addEventListener('click', (e) => {
