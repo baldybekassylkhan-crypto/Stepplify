@@ -1813,9 +1813,9 @@ document.addEventListener('DOMContentLoaded', () => {
                   1x
                 </button>
 
-                <button type="button" class="podcast-voice-btn" id="podcastVoiceBtn" title="Сменить голос (Джордж, Брайан, Антони, Лили)">
+                <button type="button" class="podcast-voice-btn" id="podcastVoiceBtn" title="Голос: Alex Bell">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-                  <span id="podcastVoiceCurrentName">Джордж</span>
+                  <span id="podcastVoiceCurrentName">Alex Bell</span>
                 </button>
               </div>
             </div>
@@ -2124,14 +2124,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!podcastBtn || !podcastCard) return;
 
     const voiceList = [
-      { key: 'antoni', name: 'Антони (KZ/RU)' },
-      { key: 'george', name: 'Джордж' },
-      { key: 'brian', name: 'Брайан' },
-      { key: 'lily', name: 'Лили' },
+      { key: 'alex', name: 'Alex Bell' },
     ];
 
-    let currentVoiceKey = localStorage.getItem('stepplify_podcast_voice') || 'antoni';
-    const activeVoice = voiceList.find(v => v.key === currentVoiceKey) || voiceList[0];
+    let currentVoiceKey = 'alex';
+    localStorage.setItem('stepplify_podcast_voice', 'alex');
+    const activeVoice = voiceList[0];
     if (voiceNameEl) voiceNameEl.textContent = activeVoice.name;
 
     const audio = window.__stepplifyPodcastAudio;

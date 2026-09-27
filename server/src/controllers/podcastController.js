@@ -15,16 +15,13 @@ if (!fs.existsSync(podcastsDir)) {
 }
 
 export const PRESET_VOICES = {
-  antoni: { id: 'ErXwobaYiN019PkySvjV', name: 'Антони (KZ / RU)', desc: 'Казахский и русский' },
-  george: { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'Джордж', desc: 'Теплый рассказчик' },
-  brian: { id: 'nPczCjzI2devNBz1zQrb', name: 'Брайан', desc: 'Спокойный диктор' },
-  lily: { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Лили', desc: 'Бархатный женский' },
+  alex: { id: 'TUQNWEvVPBLzMBSVDPUA', name: 'Alex Bell', desc: 'Глубокий дикторский голос' },
 };
 
 export const getPresetVoices = (req, res) => {
   return res.json({
     success: true,
-    default: 'antoni',
+    default: 'alex',
     voices: PRESET_VOICES,
   });
 };
@@ -40,7 +37,7 @@ function cleanTextForSpeech(text) {
 }
 
 // ElevenLabs TTS generator
-async function generateElevenLabsAudio(text, apiKey, voiceId = 'JBFqnCBsd6RMkjVDRZzb') {
+async function generateElevenLabsAudio(text, apiKey, voiceId = 'TUQNWEvVPBLzMBSVDPUA') {
   const maxLen = 4500;
   const chunks = [];
   if (text.length <= maxLen) {
@@ -174,7 +171,7 @@ export const getArticlePodcastAudio = async (req, res) => {
 
     // Determine voice choice
     const requestedVoice = (req.query.voice || '').toLowerCase();
-    const voiceKey = PRESET_VOICES[requestedVoice] ? requestedVoice : 'antoni';
+    const voiceKey = PRESET_VOICES[requestedVoice] ? requestedVoice : 'alex';
     const voiceInfo = PRESET_VOICES[voiceKey];
     const elevenVoiceId = voiceInfo.id;
 
